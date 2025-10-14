@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sentinela - Dashboard de Performance</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -367,6 +366,11 @@
             opacity: 0.9;
         }
         
+        /* Stage Highlight */
+        .stage-highlight {
+            font-weight: bold;
+        }
+        
         /* Responsive */
         @media (max-width: 1024px) {
             .charts-grid {
@@ -484,7 +488,7 @@
                 <div class="connection-form">
                     <div class="form-group">
                         <label for="spreadsheet-id">ID da Planilha Google</label>
-                        <input type="text" id="spreadsheet-id" placeholder="Ex: 1NsGJ5BDGLyx_FyY9hCrtmCzUmzx0X4Hw36JgYnKfuYk">
+                        <input type="text" id="spreadsheet-id" placeholder="Ex: 1NsGJ5BDGLyx_FyY9hCrtmCzUmzx0X4Hw36JgYnKfuYk" value="1NsGJ5BDGLyx_FyY9hCrtmCzUmzx0X4Hw36JgYnKfuYk">
                     </div>
                     <div class="form-group">
                         <label for="sheet-name">Nome da Aba</label>
@@ -492,10 +496,11 @@
                     </div>
                     <div class="form-group" style="display: flex; align-items: flex-end;">
                         <button class="btn btn-primary" id="connect-btn">
-                            <i class="fas fa-link"></i> Conectar
+                            <i class="fas fa-link"></i> Conectar & Carregar Dados
                         </button>
                     </div>
                 </div>
+                <div id="connection-status" style="margin-top: 15px; padding: 10px; border-radius: 6px; display: none;"></div>
             </div>
 
             <!-- Filters -->
@@ -504,16 +509,12 @@
                     <label for="coord-filter">Coordenação</label>
                     <select id="coord-filter">
                         <option value="">Todas</option>
-                        <option value="Coordenação São Paulo">Coordenação São Paulo</option>
-                        <option value="Coordenação Bahia Norte">Coordenação Bahia Norte</option>
                     </select>
                 </div>
                 <div class="filter-group">
                     <label for="polo-filter">Polo</label>
                     <select id="polo-filter">
                         <option value="">Todos</option>
-                        <option value="SP - Capital III">SP - Capital III</option>
-                        <option value="BA - Caminho das Árvores">BA - Caminho das Árvores</option>
                     </select>
                 </div>
                 <div class="filter-group">
@@ -528,8 +529,6 @@
                     <label for="exec-filter">Executivo</label>
                     <select id="exec-filter">
                         <option value="">Todos</option>
-                        <option value="henrique.carlos@sumup.com">henrique.carlos@sumup.com</option>
-                        <option value="franklin.toledo@sumup.com">franklin.toledo@sumup.com</option>
                     </select>
                 </div>
             </div>
@@ -543,9 +542,9 @@
                             <i class="fas fa-clipboard-check" style="color: #0369a1;"></i>
                         </div>
                     </div>
-                    <div class="kpi-value">142</div>
+                    <div class="kpi-value" id="kpi-avaliacoes">0</div>
                     <div class="kpi-trend trend-up">
-                        <i class="fas fa-arrow-up"></i> 12% em relação ao mês anterior
+                        <i class="fas fa-arrow-up"></i> <span id="kpi-trend-avaliacoes">0%</span> em relação ao mês anterior
                     </div>
                 </div>
                 <div class="kpi-card">
@@ -555,9 +554,9 @@
                             <i class="fas fa-chart-line" style="color: #16a34a;"></i>
                         </div>
                     </div>
-                    <div class="kpi-value">7.8</div>
+                    <div class="kpi-value" id="kpi-desempenho">0.0</div>
                     <div class="kpi-trend trend-up">
-                        <i class="fas fa-arrow-up"></i> 0.3 pontos
+                        <i class="fas fa-arrow-up"></i> <span id="kpi-trend-desempenho">0.0</span> pontos
                     </div>
                 </div>
                 <div class="kpi-card">
@@ -567,9 +566,9 @@
                             <i class="fas fa-exclamation-triangle" style="color: #dc2626;"></i>
                         </div>
                     </div>
-                    <div class="kpi-value">3</div>
+                    <div class="kpi-value" id="kpi-ncgs">0</div>
                     <div class="kpi-trend trend-down">
-                        <i class="fas fa-arrow-down"></i> 1 em relação ao mês anterior
+                        <i class="fas fa-arrow-down"></i> <span id="kpi-trend-ncgs">0</span> em relação ao mês anterior
                     </div>
                 </div>
                 <div class="kpi-card">
@@ -579,9 +578,9 @@
                             <i class="fas fa-comments" style="color: #ca8a04;"></i>
                         </div>
                     </div>
-                    <div class="kpi-value">87%</div>
+                    <div class="kpi-value" id="kpi-feedback">0%</div>
                     <div class="kpi-trend trend-up">
-                        <i class="fas fa-arrow-up"></i> 5% em relação ao mês anterior
+                        <i class="fas fa-arrow-up"></i> <span id="kpi-trend-feedback">0%</span> em relação ao mês anterior
                     </div>
                 </div>
             </div>
@@ -641,13 +640,13 @@
                 <div class="table-header">
                     <h3>📋 Dados Detalhados</h3>
                     <div>
-                        <button class="btn btn-primary">
+                        <button class="btn btn-primary" id="export-btn">
                             <i class="fas fa-download"></i> Exportar
                         </button>
                     </div>
                 </div>
                 <div style="overflow-x: auto;">
-                    <table>
+                    <table id="data-table">
                         <thead>
                             <tr>
                                 <th>Data</th>
@@ -655,50 +654,19 @@
                                 <th>Coordenação</th>
                                 <th>Polo</th>
                                 <th>Preparação</th>
-                                <th>Sondar</th>
-                                <th>Unir</th>
-                                <th>Mostrar</th>
-                                <th>Ultrapassar</th>
-                                <th>Propor</th>
+                                <th><span class="stage-highlight">S</span>ondar</th>
+                                <th><span class="stage-highlight">U</span>nir</th>
+                                <th><span class="stage-highlight">M</span>ostrar</th>
+                                <th><span class="stage-highlight">U</span>ltrapassar</th>
+                                <th><span class="stage-highlight">P</span>ropor</th>
                                 <th>NCG</th>
                                 <th>Liderança</th>
                                 <th>Rotas</th>
                                 <th>Feedback</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <tr>
-                                <td>09/10/2025</td>
-                                <td>henrique.carlos@sumup.com</td>
-                                <td>Coordenação São Paulo</td>
-                                <td>SP - Capital III</td>
-                                <td><span class="badge badge-success">Meets</span></td>
-                                <td><span class="badge badge-warning">Below</span></td>
-                                <td><span class="badge badge-warning">Below</span></td>
-                                <td><span class="badge badge-success">Meets</span></td>
-                                <td><span class="badge badge-success">Meets</span></td>
-                                <td><span class="badge badge-warning">Below</span></td>
-                                <td><span class="badge badge-danger">Não</span></td>
-                                <td>2</td>
-                                <td>2</td>
-                                <td>Sim</td>
-                            </tr>
-                            <tr>
-                                <td>10/10/2025</td>
-                                <td>franklin.toledo@sumup.com</td>
-                                <td>Coordenação Bahia Norte</td>
-                                <td>BA - Caminho das Árvores</td>
-                                <td><span class="badge badge-warning">Below</span></td>
-                                <td><span class="badge badge-success">Above</span></td>
-                                <td><span class="badge badge-warning">Below</span></td>
-                                <td><span class="badge badge-success">Meets</span></td>
-                                <td><span class="badge badge-warning">Below</span></td>
-                                <td><span class="badge badge-success">Meets</span></td>
-                                <td><span class="badge badge-danger">Não</span></td>
-                                <td>4</td>
-                                <td>4</td>
-                                <td>Sim</td>
-                            </tr>
+                        <tbody id="table-body">
+                            <!-- Os dados serão carregados aqui -->
                         </tbody>
                     </table>
                 </div>
@@ -707,56 +675,277 @@
     </div>
 
     <script>
+        // Dados de exemplo para demonstração
+        const sampleData = [
+            {
+                timestamp: '09/10/2025 12:28:13',
+                email: 'henrique.carlos@sumup.com',
+                coordenacao: 'Coordenação São Paulo',
+                polo: 'SP - Capital III',
+                email_executivo: 'henrique.carlos@sumup.com',
+                preparacao: 'Meets',
+                sondar: 'Below',
+                unir: 'Below',
+                mostrar: 'Meets',
+                ultrapassar: 'Meets',
+                propor: 'Below',
+                ncg: '',
+                feedback: 'Teste',
+                lideranca: 2,
+                rotas: 2,
+                feedback_recebido: 'Sim'
+            },
+            {
+                timestamp: '10/10/2025 14:18:15',
+                email: 'franklin.toledo@sumup.com',
+                coordenacao: 'Coordenação Bahia Norte',
+                polo: 'BA - Caminho das Árvores',
+                email_executivo: 'asasa',
+                preparacao: 'Below',
+                sondar: 'Above',
+                unir: 'Below',
+                mostrar: 'Meets',
+                ultrapassar: 'Below',
+                propor: 'Meets',
+                ncg: '',
+                feedback: 'Teste teste teste',
+                lideranca: 4,
+                rotas: 4,
+                feedback_recebido: 'Sim'
+            },
+            {
+                timestamp: '11/10/2025 10:15:22',
+                email: 'mariana.silva@sumup.com',
+                coordenacao: 'Coordenação São Paulo',
+                polo: 'SP - Capital III',
+                email_executivo: 'mariana.silva@sumup.com',
+                preparacao: 'Above',
+                sondar: 'Meets',
+                unir: 'Above',
+                mostrar: 'Above',
+                ultrapassar: 'Meets',
+                propor: 'Above',
+                ncg: '',
+                feedback: 'Excelente desempenho',
+                lideranca: 5,
+                rotas: 3,
+                feedback_recebido: 'Sim'
+            },
+            {
+                timestamp: '12/10/2025 16:45:33',
+                email: 'carlos.santos@sumup.com',
+                coordenacao: 'Coordenação Bahia Norte',
+                polo: 'BA - Caminho das Árvores',
+                email_executivo: 'carlos.santos@sumup.com',
+                preparacao: 'Meets',
+                sondar: 'Below',
+                unir: 'Meets',
+                mostrar: 'Below',
+                ultrapassar: 'Above',
+                propor: 'Meets',
+                ncg: 'Sim',
+                feedback: 'Precisa melhorar na etapa de mostrar',
+                lideranca: 3,
+                rotas: 5,
+                feedback_recebido: 'Não'
+            }
+        ];
+
+        // Variáveis globais para os gráficos
+        let performanceChart, distributionChart, executiveChart, leadershipChart, routesChart;
+        let currentData = [];
+
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize charts
-            initializeCharts();
+            // Inicializar com dados de exemplo
+            currentData = sampleData;
+            updateDashboard(currentData);
             
-            // Connect button event
+            // Conectar botão de evento
             document.getElementById('connect-btn').addEventListener('click', function() {
                 const spreadsheetId = document.getElementById('spreadsheet-id').value;
                 const sheetName = document.getElementById('sheet-name').value;
                 
                 if (!spreadsheetId) {
-                    alert('Por favor, insira o ID da planilha.');
+                    showStatus('Por favor, insira o ID da planilha.', 'error');
                     return;
                 }
                 
-                // In a real implementation, this would connect to the Google Sheets API
-                alert(`Conectando à planilha: ${spreadsheetId}\nAba: ${sheetName}\n\nEm uma implementação real, os dados seriam carregados aqui.`);
+                showStatus('Conectando à planilha...', 'loading');
                 
-                // Simulate data loading
-                simulateDataLoading();
+                // Simular carregamento de dados
+                setTimeout(() => {
+                    // Em produção, aqui seria feita a chamada à API do Google Sheets
+                    currentData = sampleData;
+                    updateDashboard(currentData);
+                    updateFilters(currentData);
+                    showStatus('Dados carregados com sucesso!', 'success');
+                }, 1500);
             });
             
-            // Filter change events
-            document.getElementById('coord-filter').addEventListener('change', updateCharts);
-            document.getElementById('polo-filter').addEventListener('change', updateCharts);
-            document.getElementById('exec-filter').addEventListener('change', updateCharts);
+            // Eventos de alteração de filtro
+            document.getElementById('coord-filter').addEventListener('change', filterData);
+            document.getElementById('polo-filter').addEventListener('change', filterData);
+            document.getElementById('exec-filter').addEventListener('change', filterData);
             document.getElementById('chart-type').addEventListener('change', updateCharts);
+            
+            // Botão de exportação
+            document.getElementById('export-btn').addEventListener('click', function() {
+                exportToCSV();
+            });
         });
         
-        function initializeCharts() {
-            // Performance by Stage Chart
-            const performanceCtx = document.getElementById('performanceChart').getContext('2d');
-            window.performanceChart = new Chart(performanceCtx, {
-                type: 'bar',
+        function showStatus(message, type) {
+            const statusEl = document.getElementById('connection-status');
+            statusEl.textContent = message;
+            statusEl.style.display = 'block';
+            
+            // Remover classes anteriores
+            statusEl.classList.remove('status-success', 'status-error', 'status-loading');
+            
+            // Adicionar classe baseada no tipo
+            if (type === 'success') {
+                statusEl.classList.add('status-success');
+                statusEl.style.backgroundColor = '#d1fae5';
+                statusEl.style.color = '#065f46';
+                statusEl.style.border = '1px solid #a7f3d0';
+            } else if (type === 'error') {
+                statusEl.classList.add('status-error');
+                statusEl.style.backgroundColor = '#fee2e2';
+                statusEl.style.color = '#991b1b';
+                statusEl.style.border = '1px solid #fecaca';
+            } else if (type === 'loading') {
+                statusEl.classList.add('status-loading');
+                statusEl.style.backgroundColor = '#fef3c7';
+                statusEl.style.color = '#92400e';
+                statusEl.style.border = '1px solid #fde68a';
+            }
+        }
+        
+        function updateDashboard(data) {
+            updateKPIs(data);
+            updateCharts(data);
+            updateTable(data);
+        }
+        
+        function updateKPIs(data) {
+            // KPI: Avaliações Realizadas
+            document.getElementById('kpi-avaliacoes').textContent = data.length;
+            document.getElementById('kpi-trend-avaliacoes').textContent = '+12%';
+            
+            // KPI: Média de Desempenho
+            const avgScore = calculateAverageScore(data);
+            document.getElementById('kpi-desempenho').textContent = avgScore.toFixed(1);
+            document.getElementById('kpi-trend-desempenho').textContent = '+0.3';
+            
+            // KPI: NCGs Identificadas
+            const ncgCount = data.filter(item => item.ncg && item.ncg.toLowerCase() === 'sim').length;
+            document.getElementById('kpi-ncgs').textContent = ncgCount;
+            document.getElementById('kpi-trend-ncgs').textContent = '-1';
+            
+            // KPI: Executivos com Feedback
+            const feedbackCount = data.filter(item => item.feedback_recebido && item.feedback_recebido.toLowerCase() === 'sim').length;
+            const feedbackPercentage = data.length > 0 ? Math.round((feedbackCount / data.length) * 100) : 0;
+            document.getElementById('kpi-feedback').textContent = `${feedbackPercentage}%`;
+            document.getElementById('kpi-trend-feedback').textContent = '+5%';
+        }
+        
+        function calculateAverageScore(data) {
+            if (data.length === 0) return 0;
+            
+            let totalScore = 0;
+            let evaluationCount = 0;
+            
+            const scoreMap = {
+                'Below': 5,
+                'Meets': 7,
+                'Above': 9
+            };
+            
+            data.forEach(item => {
+                const stages = ['preparacao', 'sondar', 'unir', 'mostrar', 'ultrapassar', 'propor'];
+                
+                stages.forEach(stage => {
+                    if (item[stage] && scoreMap[item[stage]] !== undefined) {
+                        totalScore += scoreMap[item[stage]];
+                        evaluationCount++;
+                    }
+                });
+            });
+            
+            return evaluationCount > 0 ? totalScore / evaluationCount : 0;
+        }
+        
+        function updateCharts() {
+            const data = currentData;
+            const chartType = document.getElementById('chart-type').value;
+            
+            // Atualizar gráfico de desempenho por etapa
+            updatePerformanceChart(data, chartType);
+            
+            // Atualizar gráfico de distribuição
+            updateDistributionChart(data);
+            
+            // Atualizar gráfico de executivos
+            updateExecutiveChart(data);
+            
+            // Atualizar gráfico de liderança
+            updateLeadershipChart(data);
+            
+            // Atualizar gráfico de rotas
+            updateRoutesChart(data);
+        }
+        
+        function updatePerformanceChart(data, type) {
+            const stages = ['preparacao', 'sondar', 'unir', 'mostrar', 'ultrapassar', 'propor'];
+            const stageLabels = ['Preparação', 'Sondar', 'Unir', 'Mostrar', 'Ultrapassar', 'Propor'];
+            const ratings = ['Below', 'Meets', 'Above'];
+            
+            const counts = {
+                'Below': Array(stages.length).fill(0),
+                'Meets': Array(stages.length).fill(0),
+                'Above': Array(stages.length).fill(0)
+            };
+            
+            data.forEach(item => {
+                stages.forEach((stage, index) => {
+                    if (item[stage] && counts[item[stage]] !== undefined) {
+                        counts[item[stage]][index]++;
+                    }
+                });
+            });
+            
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            
+            // Destruir gráfico anterior se existir
+            if (performanceChart) {
+                performanceChart.destroy();
+            }
+            
+            performanceChart = new Chart(ctx, {
+                type: type,
                 data: {
-                    labels: ['Preparação', 'Sondar', 'Unir', 'Mostrar', 'Ultrapassar', 'Propor'],
+                    labels: stageLabels,
                     datasets: [
                         {
                             label: 'Below',
-                            data: [12, 18, 15, 8, 10, 14],
-                            backgroundColor: '#ef4444'
+                            data: counts.Below,
+                            backgroundColor: '#ef4444',
+                            borderColor: '#ef4444',
+                            tension: 0.3
                         },
                         {
                             label: 'Meets',
-                            data: [25, 20, 22, 28, 26, 23],
-                            backgroundColor: '#10b981'
+                            data: counts.Meets,
+                            backgroundColor: '#10b981',
+                            borderColor: '#10b981',
+                            tension: 0.3
                         },
                         {
                             label: 'Above',
-                            data: [8, 7, 8, 9, 9, 8],
-                            backgroundColor: '#3b82f6'
+                            data: counts.Above,
+                            backgroundColor: '#3b82f6',
+                            borderColor: '#3b82f6',
+                            tension: 0.3
                         }
                     ]
                 },
@@ -765,24 +954,47 @@
                     maintainAspectRatio: false,
                     scales: {
                         x: {
-                            stacked: true
+                            stacked: type === 'bar'
                         },
                         y: {
-                            stacked: true,
+                            stacked: type === 'bar',
                             beginAtZero: true
                         }
                     }
                 }
             });
+        }
+        
+        function updateDistributionChart(data) {
+            const ratings = ['Below', 'Meets', 'Above'];
+            const counts = {
+                'Below': 0,
+                'Meets': 0,
+                'Above': 0
+            };
             
-            // Distribution Chart
-            const distributionCtx = document.getElementById('distributionChart').getContext('2d');
-            window.distributionChart = new Chart(distributionCtx, {
+            const stages = ['preparacao', 'sondar', 'unir', 'mostrar', 'ultrapassar', 'propor'];
+            
+            data.forEach(item => {
+                stages.forEach(stage => {
+                    if (item[stage] && counts[item[stage]] !== undefined) {
+                        counts[item[stage]]++;
+                    }
+                });
+            });
+            
+            const ctx = document.getElementById('distributionChart').getContext('2d');
+            
+            if (distributionChart) {
+                distributionChart.destroy();
+            }
+            
+            distributionChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     labels: ['Below', 'Meets', 'Above'],
                     datasets: [{
-                        data: [77, 144, 49],
+                        data: [counts.Below, counts.Meets, counts.Above],
                         backgroundColor: [
                             '#ef4444',
                             '#10b981',
@@ -801,16 +1013,53 @@
                     }
                 }
             });
+        }
+        
+        function updateExecutiveChart(data) {
+            // Agrupar dados por executivo
+            const executiveScores = {};
             
-            // Executive Performance Chart
-            const executiveCtx = document.getElementById('executiveChart').getContext('2d');
-            window.executiveChart = new Chart(executiveCtx, {
+            const scoreMap = {
+                'Below': 5,
+                'Meets': 7,
+                'Above': 9
+            };
+            
+            data.forEach(item => {
+                const executive = item.email_executivo;
+                if (!executiveScores[executive]) {
+                    executiveScores[executive] = { total: 0, count: 0 };
+                }
+                
+                const stages = ['preparacao', 'sondar', 'unir', 'mostrar', 'ultrapassar', 'propor'];
+                stages.forEach(stage => {
+                    if (item[stage] && scoreMap[item[stage]] !== undefined) {
+                        executiveScores[executive].total += scoreMap[item[stage]];
+                        executiveScores[executive].count++;
+                    }
+                });
+            });
+            
+            // Calcular médias
+            const executives = Object.keys(executiveScores);
+            const averages = executives.map(exec => {
+                return executiveScores[exec].count > 0 ? 
+                    (executiveScores[exec].total / executiveScores[exec].count).toFixed(1) : 0;
+            });
+            
+            const ctx = document.getElementById('executiveChart').getContext('2d');
+            
+            if (executiveChart) {
+                executiveChart.destroy();
+            }
+            
+            executiveChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: ['Henrique Carlos', 'Franklin Toledo', 'Ana Silva', 'Carlos Santos', 'Mariana Lima'],
+                    labels: executives,
                     datasets: [{
                         label: 'Pontuação Média',
-                        data: [7.2, 8.1, 7.8, 6.9, 8.4],
+                        data: averages,
                         backgroundColor: '#8b5cf6'
                     }]
                 },
@@ -825,55 +1074,85 @@
                     }
                 }
             });
+        }
+        
+        function updateLeadershipChart(data) {
+            // Agrupar por polo e calcular médias de liderança
+            const poloLeadership = {};
             
-            // Leadership Chart
-            const leadershipCtx = document.getElementById('leadershipChart').getContext('2d');
-            window.leadershipChart = new Chart(leadershipCtx, {
-                type: 'radar',
+            data.forEach(item => {
+                const polo = item.polo;
+                if (!poloLeadership[polo]) {
+                    poloLeadership[polo] = { total: 0, count: 0 };
+                }
+                
+                if (item.lideranca) {
+                    poloLeadership[polo].total += parseInt(item.lideranca);
+                    poloLeadership[polo].count++;
+                }
+            });
+            
+            const polos = Object.keys(poloLeadership);
+            const averages = polos.map(polo => {
+                return poloLeadership[polo].count > 0 ? 
+                    (poloLeadership[polo].total / poloLeadership[polo].count).toFixed(1) : 0;
+            });
+            
+            const ctx = document.getElementById('leadershipChart').getContext('2d');
+            
+            if (leadershipChart) {
+                leadershipChart.destroy();
+            }
+            
+            leadershipChart = new Chart(ctx, {
+                type: 'bar',
                 data: {
-                    labels: ['Preparação', 'Sondar', 'Unir', 'Mostrar', 'Ultrapassar', 'Propor'],
-                    datasets: [
-                        {
-                            label: 'SP - Capital III',
-                            data: [7, 6, 8, 7, 6, 7],
-                            borderColor: '#3b82f6',
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)'
-                        },
-                        {
-                            label: 'BA - Caminho das Árvores',
-                            data: [8, 7, 6, 8, 7, 8],
-                            borderColor: '#10b981',
-                            backgroundColor: 'rgba(16, 185, 129, 0.1)'
-                        }
-                    ]
+                    labels: polos,
+                    datasets: [{
+                        label: 'Média de Liderança',
+                        data: averages,
+                        backgroundColor: '#f59e0b'
+                    }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        r: {
+                        y: {
                             beginAtZero: true,
-                            max: 10
+                            max: 5
                         }
                     }
                 }
             });
+        }
+        
+        function updateRoutesChart(data) {
+            // Agrupar por mês e calcular total de rotas
+            const monthlyRoutes = {
+                'Jan': 120, 'Fev': 135, 'Mar': 140, 'Abr': 155, 
+                'Mai': 160, 'Jun': 158, 'Jul': 165, 'Ago': 170, 
+                'Set': 168, 'Out': data.reduce((sum, item) => sum + (parseInt(item.rotas) || 0), 0)
+            };
             
-            // Routes Chart
-            const routesCtx = document.getElementById('routesChart').getContext('2d');
-            window.routesChart = new Chart(routesCtx, {
+            const ctx = document.getElementById('routesChart').getContext('2d');
+            
+            if (routesChart) {
+                routesChart.destroy();
+            }
+            
+            routesChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out'],
-                    datasets: [
-                        {
-                            label: 'Rotas Realizadas',
-                            data: [120, 135, 140, 155, 160, 158, 165, 170, 168, 175],
-                            borderColor: '#f59e0b',
-                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                            tension: 0.3
-                        }
-                    ]
+                    labels: Object.keys(monthlyRoutes),
+                    datasets: [{
+                        label: 'Rotas Realizadas',
+                        data: Object.values(monthlyRoutes),
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        tension: 0.3,
+                        fill: true
+                    }]
                 },
                 options: {
                     responsive: true,
@@ -887,61 +1166,166 @@
             });
         }
         
-        function updateCharts() {
-            // In a real implementation, this would update charts based on filter values
-            console.log('Filtros atualizados:', {
-                coord: document.getElementById('coord-filter').value,
-                polo: document.getElementById('polo-filter').value,
-                exec: document.getElementById('exec-filter').value,
-                chartType: document.getElementById('chart-type').value
+        function updateTable(data) {
+            const tableBody = document.getElementById('table-body');
+            tableBody.innerHTML = '';
+            
+            data.forEach(item => {
+                const row = document.createElement('tr');
+                
+                // Formatar data
+                const date = new Date(item.timestamp);
+                const formattedDate = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+                
+                // Criar badges para as avaliações
+                const createBadge = (value) => {
+                    if (value === 'Below') return '<span class="badge badge-warning">Below</span>';
+                    if (value === 'Meets') return '<span class="badge badge-success">Meets</span>';
+                    if (value === 'Above') return '<span class="badge badge-success">Above</span>';
+                    return value;
+                };
+                
+                row.innerHTML = `
+                    <td>${formattedDate}</td>
+                    <td>${item.email_executivo}</td>
+                    <td>${item.coordenacao}</td>
+                    <td>${item.polo}</td>
+                    <td>${createBadge(item.preparacao)}</td>
+                    <td>${createBadge(item.sondar)}</td>
+                    <td>${createBadge(item.unir)}</td>
+                    <td>${createBadge(item.mostrar)}</td>
+                    <td>${createBadge(item.ultrapassar)}</td>
+                    <td>${createBadge(item.propor)}</td>
+                    <td>${item.ncg ? '<span class="badge badge-danger">Sim</span>' : '<span class="badge badge-success">Não</span>'}</td>
+                    <td>${item.lideranca}</td>
+                    <td>${item.rotas}</td>
+                    <td>${item.feedback_recebido === 'Sim' ? '<span class="badge badge-success">Sim</span>' : '<span class="badge badge-warning">Não</span>'}</td>
+                `;
+                
+                tableBody.appendChild(row);
             });
-            
-            // Change chart type if needed
-            if (document.getElementById('chart-type').value === 'line') {
-                window.performanceChart.config.type = 'line';
-                window.performanceChart.config.options.scales.x.stacked = false;
-                window.performanceChart.config.options.scales.y.stacked = false;
-            } else {
-                window.performanceChart.config.type = 'bar';
-                window.performanceChart.config.options.scales.x.stacked = true;
-                window.performanceChart.config.options.scales.y.stacked = true;
-            }
-            
-            window.performanceChart.update();
         }
         
-        function simulateDataLoading() {
-            // Simulate loading data with a slight delay
-            setTimeout(() => {
-                // Update KPIs with "new" data
-                document.querySelectorAll('.kpi-value')[0].textContent = '156';
-                document.querySelectorAll('.kpi-value')[1].textContent = '8.1';
-                document.querySelectorAll('.kpi-value')[2].textContent = '2';
-                document.querySelectorAll('.kpi-value')[3].textContent = '92%';
+        function updateFilters(data) {
+            // Atualizar filtro de coordenação
+            const coordFilter = document.getElementById('coord-filter');
+            const coords = [...new Set(data.map(item => item.coordenacao))].filter(Boolean);
+            
+            // Limpar opções existentes (exceto a primeira)
+            while (coordFilter.options.length > 1) {
+                coordFilter.remove(1);
+            }
+            
+            coords.forEach(coord => {
+                const option = document.createElement('option');
+                option.value = coord;
+                option.textContent = coord;
+                coordFilter.appendChild(option);
+            });
+            
+            // Atualizar filtro de polo
+            const poloFilter = document.getElementById('polo-filter');
+            const polos = [...new Set(data.map(item => item.polo))].filter(Boolean);
+            
+            while (poloFilter.options.length > 1) {
+                poloFilter.remove(1);
+            }
+            
+            polos.forEach(polo => {
+                const option = document.createElement('option');
+                option.value = polo;
+                option.textContent = polo;
+                poloFilter.appendChild(option);
+            });
+            
+            // Atualizar filtro de executivo
+            const execFilter = document.getElementById('exec-filter');
+            const execs = [...new Set(data.map(item => item.email_executivo))].filter(Boolean);
+            
+            while (execFilter.options.length > 1) {
+                execFilter.remove(1);
+            }
+            
+            execs.forEach(exec => {
+                const option = document.createElement('option');
+                option.value = exec;
+                option.textContent = exec;
+                execFilter.appendChild(option);
+            });
+        }
+        
+        function filterData() {
+            const coordFilter = document.getElementById('coord-filter').value;
+            const poloFilter = document.getElementById('polo-filter').value;
+            const execFilter = document.getElementById('exec-filter').value;
+            
+            let filteredData = sampleData;
+            
+            if (coordFilter) {
+                filteredData = filteredData.filter(item => item.coordenacao === coordFilter);
+            }
+            
+            if (poloFilter) {
+                filteredData = filteredData.filter(item => item.polo === poloFilter);
+            }
+            
+            if (execFilter) {
+                filteredData = filteredData.filter(item => item.email_executivo === execFilter);
+            }
+            
+            currentData = filteredData;
+            updateDashboard(currentData);
+        }
+        
+        function exportToCSV() {
+            if (currentData.length === 0) {
+                alert('Não há dados para exportar.');
+                return;
+            }
+            
+            // Criar cabeçalhos CSV
+            const headers = ['Data', 'Executivo', 'Coordenação', 'Polo', 'Preparação', 'Sondar', 'Unir', 'Mostrar', 'Ultrapassar', 'Propor', 'NCG', 'Liderança', 'Rotas', 'Feedback'];
+            
+            // Criar linhas de dados
+            const csvRows = [headers.join(',')];
+            
+            currentData.forEach(item => {
+                const date = new Date(item.timestamp);
+                const formattedDate = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
                 
-                // Add a new row to the table
-                const tableBody = document.querySelector('tbody');
-                const newRow = document.createElement('tr');
-                newRow.innerHTML = `
-                    <td>11/10/2025</td>
-                    <td>mariana.lima@sumup.com</td>
-                    <td>Coordenação São Paulo</td>
-                    <td>SP - Capital III</td>
-                    <td><span class="badge badge-success">Meets</span></td>
-                    <td><span class="badge badge-success">Above</span></td>
-                    <td><span class="badge badge-success">Meets</span></td>
-                    <td><span class="badge badge-success">Above</span></td>
-                    <td><span class="badge badge-success">Meets</span></td>
-                    <td><span class="badge badge-success">Above</span></td>
-                    <td><span class="badge badge-danger">Não</span></td>
-                    <td>5</td>
-                    <td>3</td>
-                    <td>Sim</td>
-                `;
-                tableBody.appendChild(newRow);
+                const row = [
+                    formattedDate,
+                    `"${item.email_executivo}"`,
+                    `"${item.coordenacao}"`,
+                    `"${item.polo}"`,
+                    item.preparacao,
+                    item.sondar,
+                    item.unir,
+                    item.mostrar,
+                    item.ultrapassar,
+                    item.propor,
+                    item.ncg,
+                    item.lideranca,
+                    item.rotas,
+                    item.feedback_recebido
+                ];
                 
-                alert('Dados carregados com sucesso!');
-            }, 1000);
+                csvRows.push(row.join(','));
+            });
+            
+            // Criar e baixar arquivo CSV
+            const csvString = csvRows.join('\n');
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'sentinela_dados.csv');
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
     </script>
 </body>
