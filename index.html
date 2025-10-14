@@ -820,7 +820,6 @@
             
             // Para planilhas públicas, podemos usar uma URL simples
             const publicUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:json&sheet=${sheetName}`;
-            addDebugInfo(`🔗 URL: ${publicUrl}`);
             
             fetch(publicUrl)
                 .then(response => {
@@ -834,7 +833,6 @@
                     
                     // Processar dados JSON do Google Visualization API
                     const jsonData = JSON.parse(data.substring(47).slice(0, -2));
-                    addDebugInfo(`📋 Estrutura JSON recebida: ${Object.keys(jsonData).join(', ')}`);
                     
                     currentData = processSheetData(jsonData);
                     
@@ -878,14 +876,9 @@
                 })
                 .then(csvData => {
                     addDebugInfo('✅ Dados CSV recebidos');
-                    addDebugInfo(`📄 Primeiras 500 caracteres: ${csvData.substring(0, 500)}...`);
                     
                     const parsedData = parseCSV(csvData);
                     addDebugInfo(`📊 ${parsedData.length} linhas CSV parseadas`);
-                    
-                    if (parsedData.length > 0) {
-                        addDebugInfo(`📝 Cabeçalhos CSV: ${Object.keys(parsedData[0]).join(', ')}`);
-                    }
                     
                     currentData = processSheetDataFromCSV(parsedData);
                     
@@ -960,17 +953,13 @@
         
         // Função para mapear dados de uma linha
         function mapRowData(rowData, rowIndex) {
-            addDebugInfo(`🔍 Processando linha ${rowIndex}: ${JSON.stringify(rowData).substring(0, 200)}...`);
-            
             // Função auxiliar para extrair dados com diferentes nomes possíveis de colunas
             const getValue = (possibleNames) => {
                 for (const name of possibleNames) {
                     if (rowData[name] !== undefined && rowData[name] !== '') {
-                        addDebugInfo(`✅ Encontrado valor para ${name}: ${rowData[name]}`);
                         return rowData[name];
                     }
                 }
-                addDebugInfo(`❌ Nenhum valor encontrado para: ${possibleNames.join(', ')}`);
                 return '';
             };
             
@@ -982,7 +971,7 @@
                 'Carimbo de data'
             ]);
             
-            // Mapear avaliações das etapas
+            // Mapear avaliações das etapas - USANDO OS NOMES EXATOS DA SUA PLANILHA
             const preparacao = getValue([
                 'Avalie o desempenho na Preparação',
                 'Preparação',
@@ -1015,13 +1004,20 @@
                 'Propor'
             ]);
             
-            // Mapear liderança
+            // Mapear NCG
+            const ncg = getValue([
+                'Marque se houve alguma Não Conformidade Grave (desconto de 100 pontos)',
+                'NCG',
+                'Não Conformidade Grave'
+            ]);
+            
+            // Mapear liderança - USANDO O NOME EXATO DA SUA PLANILHA
             const liderancaRaw = getValue([
                 'BÔNUS: PERCEPÇÃO DE LIDERANÇA 🌟',
+                'BÔNUS: PERCEPÇÃO DE LIDERANÇA',
                 'PERCEPÇÃO DE LIDERANÇA',
                 'Liderança',
-                'Lideranca',
-                'BÔNUS: PERCEPÇÃO DE LIDERANÇA'
+                'Lideranca'
             ]);
             
             // Converter liderança para número
@@ -1032,7 +1028,6 @@
                 } else if (typeof liderancaRaw === 'string') {
                     lideranca = parseInt(liderancaRaw) || 0;
                 }
-                addDebugInfo(`⭐ Liderança convertida: ${lideranca}`);
             }
             
             // Mapear rotas
@@ -1049,7 +1044,6 @@
                 } else if (typeof rotasRaw === 'string') {
                     rotas = parseInt(rotasRaw) || 0;
                 }
-                addDebugInfo(`🔄 Rotas convertidas: ${rotas}`);
             }
             
             const mappedData = {
@@ -1064,11 +1058,7 @@
                 mostrar: mostrar,
                 ultrapassar: ultrapassar,
                 propor: propor,
-                ncg: getValue([
-                    'Marque se houve alguma Não Conformidade Grave (desconto de 100 pontos)',
-                    'NCG',
-                    'Não Conformidade Grave'
-                ]),
+                ncg: ncg,
                 feedback: getValue([
                     'Escreva um feedback sobre o Executivo',
                     'Feedback'
@@ -1081,7 +1071,8 @@
                 ])
             };
             
-            addDebugInfo(`📋 Dados mapeados para linha ${rowIndex}: ${JSON.stringify(mappedData)}`);
+            // Log de debug para esta linha
+            addDebugInfo(`📋 Linha ${rowIndex}: Preparação=${preparacao}, Sondar=${sondar}, Unir=${unir}, Mostrar=${mostrar}, Ultrapassar=${ultrapassar}, Propor=${propor}, NCG=${ncg}, Liderança=${lideranca}`);
             
             return mappedData;
         }
