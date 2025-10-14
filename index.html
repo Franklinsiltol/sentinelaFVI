@@ -341,11 +341,18 @@
             font-weight: 500;
         }
         
-        .form-group input {
+        .form-group input, .form-group textarea {
             width: 100%;
             padding: 10px;
             border: 1px solid var(--border-color);
             border-radius: 6px;
+        }
+        
+        .form-group textarea {
+            height: 120px;
+            resize: vertical;
+            font-family: monospace;
+            font-size: 0.85rem;
         }
         
         .btn {
@@ -366,9 +373,40 @@
             opacity: 0.9;
         }
         
+        .btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
         /* Stage Highlight */
         .stage-highlight {
             font-weight: bold;
+        }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 15px;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        
+        .tab.active {
+            border-bottom: 2px solid var(--primary-black);
+            font-weight: 600;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
         }
         
         /* Responsive */
@@ -417,6 +455,21 @@
             .main-content {
                 padding: 10px;
             }
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0,0,0,.3);
+            border-radius: 50%;
+            border-top-color: #000;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -485,21 +538,69 @@
                 <div class="panel-header">
                     <h3>🔗 Conectar Planilha</h3>
                 </div>
-                <div class="connection-form">
-                    <div class="form-group">
-                        <label for="spreadsheet-id">ID da Planilha Google</label>
-                        <input type="text" id="spreadsheet-id" placeholder="Ex: 1NsGJ5BDGLyx_FyY9hCrtmCzUmzx0X4Hw36JgYnKfuYk" value="1NsGJ5BDGLyx_FyY9hCrtmCzUmzx0X4Hw36JgYnKfuYk">
+                
+                <div class="tabs">
+                    <div class="tab active" data-tab="public">Planilha Pública</div>
+                    <div class="tab" data-tab="private">Planilha Privada</div>
+                </div>
+                
+                <!-- Aba para planilhas públicas -->
+                <div class="tab-content active" id="public-tab">
+                    <div class="connection-form">
+                        <div class="form-group">
+                            <label for="spreadsheet-id">ID da Planilha Google</label>
+                            <input type="text" id="spreadsheet-id" placeholder="Ex: 1NsGJ5BDGLyx_FyY9hCrtmCzUmzx0X4Hw36JgYnKfuYk" value="1NsGJ5BDGLyx_FyY9hCrtmCzUmzx0X4Hw36JgYnKfuYk">
+                        </div>
+                        <div class="form-group">
+                            <label for="sheet-name">Nome da Aba</label>
+                            <input type="text" id="sheet-name" placeholder="Ex: Página1" value="Página1">
+                        </div>
+                        <div class="form-group" style="display: flex; align-items: flex-end;">
+                            <button class="btn btn-primary" id="connect-public-btn">
+                                <i class="fas fa-link"></i> Conectar & Carregar Dados
+                            </button>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="sheet-name">Nome da Aba</label>
-                        <input type="text" id="sheet-name" placeholder="Ex: Página1" value="Página1">
-                    </div>
-                    <div class="form-group" style="display: flex; align-items: flex-end;">
-                        <button class="btn btn-primary" id="connect-btn">
-                            <i class="fas fa-link"></i> Conectar & Carregar Dados
-                        </button>
+                    <div class="form-group" style="margin-top: 15px;">
+                        <p style="font-size: 0.9rem; color: #666;">
+                            <i class="fas fa-info-circle"></i> Para planilhas públicas, apenas cole o ID da planilha. 
+                            Para planilhas privadas, use a aba "Planilha Privada".
+                        </p>
                     </div>
                 </div>
+                
+                <!-- Aba para planilhas privadas -->
+                <div class="tab-content" id="private-tab">
+                    <div class="connection-form">
+                        <div class="form-group">
+                            <label for="private-spreadsheet-id">ID da Planilha Google</label>
+                            <input type="text" id="private-spreadsheet-id" placeholder="Ex: 1NsGJ5BDGLyx_FyY9hCrtmCzUmzx0X4Hw36JgYnKfuYk">
+                        </div>
+                        <div class="form-group">
+                            <label for="private-sheet-name">Nome da Aba</label>
+                            <input type="text" id="private-sheet-name" placeholder="Ex: Página1" value="Página1">
+                        </div>
+                        <div class="form-group">
+                            <label for="service-account-json">Credenciais de Serviço (JSON)</label>
+                            <textarea id="service-account-json" placeholder="Cole o conteúdo do arquivo JSON de credenciais de serviço aqui"></textarea>
+                        </div>
+                        <div class="form-group" style="display: flex; align-items: flex-end;">
+                            <button class="btn btn-primary" id="connect-private-btn">
+                                <i class="fas fa-link"></i> Conectar & Carregar Dados
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top: 15px;">
+                        <p style="font-size: 0.9rem; color: #666;">
+                            <i class="fas fa-info-circle"></i> Para planilhas privadas, você precisa fornecer as credenciais 
+                            de serviço em formato JSON. 
+                            <a href="https://developers.google.com/workspace/guides/create-credentials#service-account" target="_blank">
+                                Como obter credenciais de serviço
+                            </a>
+                        </p>
+                    </div>
+                </div>
+                
                 <div id="connection-status" style="margin-top: 15px; padding: 10px; border-radius: 6px; display: none;"></div>
             </div>
 
@@ -675,93 +776,30 @@
     </div>
 
     <script>
-        // Dados de exemplo para demonstração
-        const sampleData = [
-            {
-                timestamp: '09/10/2025 12:28:13',
-                email: 'henrique.carlos@sumup.com',
-                coordenacao: 'Coordenação São Paulo',
-                polo: 'SP - Capital III',
-                email_executivo: 'henrique.carlos@sumup.com',
-                preparacao: 'Meets',
-                sondar: 'Below',
-                unir: 'Below',
-                mostrar: 'Meets',
-                ultrapassar: 'Meets',
-                propor: 'Below',
-                ncg: '',
-                feedback: 'Teste',
-                lideranca: 2,
-                rotas: 2,
-                feedback_recebido: 'Sim'
-            },
-            {
-                timestamp: '10/10/2025 14:18:15',
-                email: 'franklin.toledo@sumup.com',
-                coordenacao: 'Coordenação Bahia Norte',
-                polo: 'BA - Caminho das Árvores',
-                email_executivo: 'asasa',
-                preparacao: 'Below',
-                sondar: 'Above',
-                unir: 'Below',
-                mostrar: 'Meets',
-                ultrapassar: 'Below',
-                propor: 'Meets',
-                ncg: '',
-                feedback: 'Teste teste teste',
-                lideranca: 4,
-                rotas: 4,
-                feedback_recebido: 'Sim'
-            },
-            {
-                timestamp: '11/10/2025 10:15:22',
-                email: 'mariana.silva@sumup.com',
-                coordenacao: 'Coordenação São Paulo',
-                polo: 'SP - Capital III',
-                email_executivo: 'mariana.silva@sumup.com',
-                preparacao: 'Above',
-                sondar: 'Meets',
-                unir: 'Above',
-                mostrar: 'Above',
-                ultrapassar: 'Meets',
-                propor: 'Above',
-                ncg: '',
-                feedback: 'Excelente desempenho',
-                lideranca: 5,
-                rotas: 3,
-                feedback_recebido: 'Sim'
-            },
-            {
-                timestamp: '12/10/2025 16:45:33',
-                email: 'carlos.santos@sumup.com',
-                coordenacao: 'Coordenação Bahia Norte',
-                polo: 'BA - Caminho das Árvores',
-                email_executivo: 'carlos.santos@sumup.com',
-                preparacao: 'Meets',
-                sondar: 'Below',
-                unir: 'Meets',
-                mostrar: 'Below',
-                ultrapassar: 'Above',
-                propor: 'Meets',
-                ncg: 'Sim',
-                feedback: 'Precisa melhorar na etapa de mostrar',
-                lideranca: 3,
-                rotas: 5,
-                feedback_recebido: 'Não'
-            }
-        ];
-
         // Variáveis globais para os gráficos
         let performanceChart, distributionChart, executiveChart, leadershipChart, routesChart;
         let currentData = [];
 
         document.addEventListener('DOMContentLoaded', function() {
-            // Inicializar com dados de exemplo
-            currentData = sampleData;
-            updateDashboard(currentData);
+            // Inicializar com dados vazios
+            updateDashboard([]);
             
-            // Conectar botão de evento
-            document.getElementById('connect-btn').addEventListener('click', function() {
+            // Configurar abas
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // Remover classe active de todas as abas
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    
+                    // Adicionar classe active à aba clicada
+                    this.classList.add('active');
+                    const tabId = this.getAttribute('data-tab');
+                    document.getElementById(`${tabId}-tab`).classList.add('active');
+                });
+            });
+            
+            // Conectar botão para planilhas públicas
+            document.getElementById('connect-public-btn').addEventListener('click', function() {
                 const spreadsheetId = document.getElementById('spreadsheet-id').value;
                 const sheetName = document.getElementById('sheet-name').value;
                 
@@ -770,16 +808,42 @@
                     return;
                 }
                 
-                showStatus('Conectando à planilha...', 'loading');
+                // Desabilitar botão durante o carregamento
+                const connectBtn = document.getElementById('connect-public-btn');
+                connectBtn.disabled = true;
+                connectBtn.innerHTML = '<div class="loading"></div> Carregando...';
                 
-                // Simular carregamento de dados
-                setTimeout(() => {
-                    // Em produção, aqui seria feita a chamada à API do Google Sheets
-                    currentData = sampleData;
-                    updateDashboard(currentData);
-                    updateFilters(currentData);
-                    showStatus('Dados carregados com sucesso!', 'success');
-                }, 1500);
+                showStatus('Conectando à planilha pública...', 'loading');
+                
+                // Carregar dados da planilha pública
+                loadPublicSpreadsheetData(spreadsheetId, sheetName);
+            });
+            
+            // Conectar botão para planilhas privadas
+            document.getElementById('connect-private-btn').addEventListener('click', function() {
+                const spreadsheetId = document.getElementById('private-spreadsheet-id').value;
+                const sheetName = document.getElementById('private-sheet-name').value;
+                const serviceAccountJson = document.getElementById('service-account-json').value;
+                
+                if (!spreadsheetId) {
+                    showStatus('Por favor, insira o ID da planilha.', 'error');
+                    return;
+                }
+                
+                if (!serviceAccountJson) {
+                    showStatus('Por favor, cole as credenciais de serviço em formato JSON.', 'error');
+                    return;
+                }
+                
+                // Desabilitar botão durante o carregamento
+                const connectBtn = document.getElementById('connect-private-btn');
+                connectBtn.disabled = true;
+                connectBtn.innerHTML = '<div class="loading"></div> Carregando...';
+                
+                showStatus('Conectando à planilha privada...', 'loading');
+                
+                // Carregar dados da planilha privada
+                loadPrivateSpreadsheetData(spreadsheetId, sheetName, serviceAccountJson);
             });
             
             // Eventos de alteração de filtro
@@ -794,32 +858,229 @@
             });
         });
         
+        // Função para carregar planilhas públicas
+        function loadPublicSpreadsheetData(spreadsheetId, sheetName) {
+            // Para planilhas públicas, podemos usar uma URL simples
+            // Esta é uma URL pública de exemplo - em produção, você precisaria usar a API do Google Sheets
+            const publicUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${sheetName}`;
+            
+            // Tentar carregar os dados usando CORS proxy para evitar problemas de mesma origem
+            fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(publicUrl)}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Erro na rede');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Processar dados CSV
+                    const csvData = parseCSV(data.contents);
+                    currentData = processSheetData(csvData);
+                    updateDashboard(currentData);
+                    updateFilters(currentData);
+                    
+                    // Reabilitar botão
+                    const connectBtn = document.getElementById('connect-public-btn');
+                    connectBtn.disabled = false;
+                    connectBtn.innerHTML = '<i class="fas fa-link"></i> Conectar & Carregar Dados';
+                    
+                    showStatus(`Dados carregados com sucesso! ${currentData.length} registros encontrados.`, 'success');
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar dados:', error);
+                    
+                    // Em caso de erro, usar dados de exemplo
+                    useSampleData('public');
+                    
+                    // Reabilitar botão
+                    const connectBtn = document.getElementById('connect-public-btn');
+                    connectBtn.disabled = false;
+                    connectBtn.innerHTML = '<i class="fas fa-link"></i> Conectar & Carregar Dados';
+                    
+                    showStatus('Não foi possível carregar dados da planilha. Usando dados de exemplo.', 'warning');
+                });
+        }
+        
+        // Função para carregar planilhas privadas
+        function loadPrivateSpreadsheetData(spreadsheetId, sheetName, serviceAccountJson) {
+            try {
+                // Em um ambiente real, você enviaria as credenciais para um servidor seguro
+                // que faria a autenticação com a API do Google Sheets
+                
+                // Por questões de segurança, não podemos processar credenciais JSON diretamente no cliente
+                // Esta é apenas uma simulação
+                
+                // Simular processamento de credenciais
+                setTimeout(() => {
+                    // Em produção, você precisaria implementar um backend para isso
+                    useSampleData('private');
+                    
+                    // Reabilitar botão
+                    const connectBtn = document.getElementById('connect-private-btn');
+                    connectBtn.disabled = false;
+                    connectBtn.innerHTML = '<i class="fas fa-link"></i> Conectar & Carregar Dados';
+                    
+                    showStatus('Para planilhas privadas, é necessário implementar um backend seguro para autenticação.', 'warning');
+                }, 1500);
+                
+            } catch (error) {
+                console.error('Erro ao processar credenciais:', error);
+                
+                // Reabilitar botão
+                const connectBtn = document.getElementById('connect-private-btn');
+                connectBtn.disabled = false;
+                connectBtn.innerHTML = '<i class="fas fa-link"></i> Conectar & Carregar Dados';
+                
+                showStatus('Erro ao processar credenciais. Verifique o formato JSON.', 'error');
+            }
+        }
+        
+        // Função para usar dados de exemplo
+        function useSampleData(type) {
+            // Dados de exemplo baseados na estrutura fornecida
+            const sampleData = [
+                {
+                    timestamp: '09/10/2025 12:28:13',
+                    email: 'henrique.carlos@sumup.com',
+                    coordenacao: 'Coordenação São Paulo',
+                    polo: 'SP - Capital III',
+                    email_executivo: 'henrique.carlos@sumup.com',
+                    preparacao: 'Meets',
+                    sondar: 'Below',
+                    unir: 'Below',
+                    mostrar: 'Meets',
+                    ultrapassar: 'Meets',
+                    propor: 'Below',
+                    ncg: '',
+                    feedback: 'Teste',
+                    lideranca: 2,
+                    rotas: 2,
+                    feedback_recebido: 'Sim'
+                },
+                {
+                    timestamp: '10/10/2025 14:18:15',
+                    email: 'franklin.toledo@sumup.com',
+                    coordenacao: 'Coordenação Bahia Norte',
+                    polo: 'BA - Caminho das Árvores',
+                    email_executivo: 'asasa',
+                    preparacao: 'Below',
+                    sondar: 'Above',
+                    unir: 'Below',
+                    mostrar: 'Meets',
+                    ultrapassar: 'Below',
+                    propor: 'Meets',
+                    ncg: '',
+                    feedback: 'Teste teste teste',
+                    lideranca: 4,
+                    rotas: 4,
+                    feedback_recebido: 'Sim'
+                },
+                {
+                    timestamp: '11/10/2025 10:15:22',
+                    email: 'mariana.silva@sumup.com',
+                    coordenacao: 'Coordenação São Paulo',
+                    polo: 'SP - Capital III',
+                    email_executivo: 'mariana.silva@sumup.com',
+                    preparacao: 'Above',
+                    sondar: 'Meets',
+                    unir: 'Above',
+                    mostrar: 'Above',
+                    ultrapassar: 'Meets',
+                    propor: 'Above',
+                    ncg: '',
+                    feedback: 'Excelente desempenho',
+                    lideranca: 5,
+                    rotas: 3,
+                    feedback_recebido: 'Sim'
+                }
+            ];
+            
+            currentData = sampleData;
+            updateDashboard(currentData);
+            updateFilters(currentData);
+        }
+        
+        // Função para processar dados CSV
+        function parseCSV(csvText) {
+            const lines = csvText.split('\n');
+            const result = [];
+            
+            // Obter cabeçalhos
+            const headers = lines[0].split(',').map(header => header.replace(/"/g, '').trim());
+            
+            // Processar linhas de dados
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+                
+                const obj = {};
+                const currentline = lines[i].split(',');
+                
+                for (let j = 0; j < headers.length; j++) {
+                    obj[headers[j]] = currentline[j] ? currentline[j].replace(/"/g, '').trim() : '';
+                }
+                
+                result.push(obj);
+            }
+            
+            return result;
+        }
+        
+        // Função para processar dados da planilha
+        function processSheetData(data) {
+            // Esta função converte os dados brutos da planilha para o formato interno
+            // Baseado na estrutura fornecida
+            return data.map(row => {
+                return {
+                    timestamp: row['Carimbo de data/hora'] || '',
+                    email: row['Endereço de e-mail'] || '',
+                    coordenacao: row['Coordenação'] || '',
+                    polo: row['Polo'] || '',
+                    email_executivo: row['E-mail do Executivo'] || '',
+                    preparacao: row['Avalie o desempenho na Preparação'] || '',
+                    sondar: row['Avalie o desempenho na etapa Sondar'] || '',
+                    unir: row['Avalie o desempenho na etapa Unir'] || '',
+                    mostrar: row['Avalie o desempenho na etapa Mostrar'] || '',
+                    ultrapassar: row['Avalie o desempenho na etapa Ultrapassar'] || '',
+                    propor: row['Avalie o desempenho na etapa Propor'] || '',
+                    ncg: row['Marque se houve alguma Não Conformidade Grave (desconto de 100 pontos)'] || '',
+                    feedback: row['Escreva um feedback sobre o Executivo'] || '',
+                    lideranca: parseInt(row['BÔNUS: PERCEPÇÃO DE LIDERANÇA 🌟']) || 0,
+                    rotas: parseInt(row['Quantas rotas foram feitas com esse executivo esse mês?']) || 0,
+                    feedback_recebido: row['Executivo recebeu feedback esse mês?'] || ''
+                };
+            });
+        }
+        
         function showStatus(message, type) {
             const statusEl = document.getElementById('connection-status');
             statusEl.textContent = message;
             statusEl.style.display = 'block';
             
             // Remover classes anteriores
-            statusEl.classList.remove('status-success', 'status-error', 'status-loading');
+            statusEl.classList.remove('status-success', 'status-error', 'status-loading', 'status-warning');
             
             // Adicionar classe baseada no tipo
             if (type === 'success') {
-                statusEl.classList.add('status-success');
                 statusEl.style.backgroundColor = '#d1fae5';
                 statusEl.style.color = '#065f46';
                 statusEl.style.border = '1px solid #a7f3d0';
             } else if (type === 'error') {
-                statusEl.classList.add('status-error');
                 statusEl.style.backgroundColor = '#fee2e2';
                 statusEl.style.color = '#991b1b';
                 statusEl.style.border = '1px solid #fecaca';
             } else if (type === 'loading') {
-                statusEl.classList.add('status-loading');
+                statusEl.style.backgroundColor = '#fef3c7';
+                statusEl.style.color = '#92400e';
+                statusEl.style.border = '1px solid #fde68a';
+            } else if (type === 'warning') {
                 statusEl.style.backgroundColor = '#fef3c7';
                 statusEl.style.color = '#92400e';
                 statusEl.style.border = '1px solid #fde68a';
             }
         }
+        
+        // As funções restantes (updateDashboard, updateKPIs, updateCharts, etc.) permanecem as mesmas
+        // da versão anterior para manter a funcionalidade do dashboard
         
         function updateDashboard(data) {
             updateKPIs(data);
@@ -830,23 +1091,23 @@
         function updateKPIs(data) {
             // KPI: Avaliações Realizadas
             document.getElementById('kpi-avaliacoes').textContent = data.length;
-            document.getElementById('kpi-trend-avaliacoes').textContent = '+12%';
+            document.getElementById('kpi-trend-avaliacoes').textContent = data.length > 0 ? '+12%' : '0%';
             
             // KPI: Média de Desempenho
             const avgScore = calculateAverageScore(data);
             document.getElementById('kpi-desempenho').textContent = avgScore.toFixed(1);
-            document.getElementById('kpi-trend-desempenho').textContent = '+0.3';
+            document.getElementById('kpi-trend-desempenho').textContent = data.length > 0 ? '+0.3' : '0.0';
             
             // KPI: NCGs Identificadas
             const ncgCount = data.filter(item => item.ncg && item.ncg.toLowerCase() === 'sim').length;
             document.getElementById('kpi-ncgs').textContent = ncgCount;
-            document.getElementById('kpi-trend-ncgs').textContent = '-1';
+            document.getElementById('kpi-trend-ncgs').textContent = data.length > 0 ? '-1' : '0';
             
             // KPI: Executivos com Feedback
             const feedbackCount = data.filter(item => item.feedback_recebido && item.feedback_recebido.toLowerCase() === 'sim').length;
             const feedbackPercentage = data.length > 0 ? Math.round((feedbackCount / data.length) * 100) : 0;
             document.getElementById('kpi-feedback').textContent = `${feedbackPercentage}%`;
-            document.getElementById('kpi-trend-feedback').textContent = '+5%';
+            document.getElementById('kpi-trend-feedback').textContent = data.length > 0 ? '+5%' : '0%';
         }
         
         function calculateAverageScore(data) {
@@ -1053,6 +1314,32 @@
                 executiveChart.destroy();
             }
             
+            // Se não há dados, mostrar gráfico vazio
+            if (executives.length === 0) {
+                executiveChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Sem dados'],
+                        datasets: [{
+                            label: 'Pontuação Média',
+                            data: [0],
+                            backgroundColor: '#8b5cf6'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 10
+                            }
+                        }
+                    }
+                });
+                return;
+            }
+            
             executiveChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -1102,6 +1389,32 @@
             
             if (leadershipChart) {
                 leadershipChart.destroy();
+            }
+            
+            // Se não há dados, mostrar gráfico vazio
+            if (polos.length === 0) {
+                leadershipChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Sem dados'],
+                        datasets: [{
+                            label: 'Média de Liderança',
+                            data: [0],
+                            backgroundColor: '#f59e0b'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 5
+                            }
+                        }
+                    }
+                });
+                return;
             }
             
             leadershipChart = new Chart(ctx, {
@@ -1169,6 +1482,13 @@
         function updateTable(data) {
             const tableBody = document.getElementById('table-body');
             tableBody.innerHTML = '';
+            
+            if (data.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td colspan="14" style="text-align: center; padding: 20px;">Nenhum dado disponível. Conecte a uma planilha para carregar os dados.</td>`;
+                tableBody.appendChild(row);
+                return;
+            }
             
             data.forEach(item => {
                 const row = document.createElement('tr');
@@ -1259,7 +1579,7 @@
             const poloFilter = document.getElementById('polo-filter').value;
             const execFilter = document.getElementById('exec-filter').value;
             
-            let filteredData = sampleData;
+            let filteredData = currentData;
             
             if (coordFilter) {
                 filteredData = filteredData.filter(item => item.coordenacao === coordFilter);
@@ -1273,8 +1593,7 @@
                 filteredData = filteredData.filter(item => item.email_executivo === execFilter);
             }
             
-            currentData = filteredData;
-            updateDashboard(currentData);
+            updateDashboard(filteredData);
         }
         
         function exportToCSV() {
