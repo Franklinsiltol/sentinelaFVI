@@ -164,9 +164,13 @@
         </header>
 
         <div class="card config-section">
-            <div class="input-group" style="flex-grow: 3;">
+            <div class="input-group" style="flex-grow: 2;">
                 <label for="sheetId">📄 Google Sheet ID (Planilha deve ser pública)</label>
                 <input type="text" id="sheetId" value="1NsGJ5BDGLyx_FyY9hCrtmCzUmzx0X4Hw36JgYnKfuYk">
+            </div>
+            <div class="input-group" style="flex-grow: 1;">
+                <label for="sheetName">📝 Nome da Aba (Ex: Página1)</label>
+                <input type="text" id="sheetName" placeholder="Deixe em branco se for a primeira aba">
             </div>
             <button id="loadDataBtn">Carregar Dados</button>
         </div>
@@ -256,6 +260,7 @@
 <script>
 const DOM = {
     sheetIdInput: document.getElementById('sheetId'),
+    sheetNameInput: document.getElementById('sheetName'),
     loadDataBtn: document.getElementById('loadDataBtn'),
     loader: document.getElementById('loader'),
     dashboardContent: document.getElementById('dashboard-content'),
@@ -292,6 +297,8 @@ function normalizeHeader(header) {
 
 async function loadData() {
     const sheetId = DOM.sheetIdInput.value.trim();
+    const sheetName = DOM.sheetNameInput.value.trim();
+
     if (!sheetId) {
         alert('Por favor, insira o ID da planilha.');
         return;
@@ -302,7 +309,10 @@ async function loadData() {
     DOM.dashboardContent.style.display = 'none';
     DOM.loader.textContent = 'Carregando dados da planilha... ⏳';
 
-    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`;
+    let url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`;
+    if (sheetName) {
+        url += `&sheet=${encodeURIComponent(sheetName)}`;
+    }
 
     try {
         const response = await fetch(url);
@@ -310,12 +320,13 @@ async function loadData() {
             throw new Error(`Falha na requisição: ${response.statusText}`);
         }
         let text = await response.text();
-
+        
         const jsonpWrapper = 'google.visualization.Query.setResponse(';
-        if (text.startsWith(jsonpWrapper)) {
-            text = text.substring(jsonpWrapper.length, text.length - 2);
+        if (!text.startsWith(jsonpWrapper)) {
+             throw new Error('Resposta inválida do Google Sheets. Verifique se a planilha é pública e o ID/Nome da Aba estão corretos.');
         }
 
+        text = text.substring(jsonpWrapper.length, text.length - 2);
         const json = JSON.parse(text);
 
         if (json.status === 'error') {
@@ -324,7 +335,7 @@ async function loadData() {
 
         const table = json.table;
         if (!table || !table.rows || table.rows.length === 0) {
-            throw new Error('Nenhum dado encontrado. Verifique se a planilha tem dados e está pública.');
+            throw new Error('Nenhum dado encontrado. Verifique se a planilha tem dados, está pública e se o nome da aba está correto.');
         }
 
         const raw_headers = table.cols.map(col => col.label);
@@ -351,7 +362,7 @@ async function loadData() {
     } catch (error) {
         DOM.loader.textContent = `❌ Erro ao carregar dados: ${error.message}`;
         console.error(error);
-        alert(`Falha ao carregar dados. Verifique se o ID está correto e se a planilha é pública.\n\n${error.message}`);
+        alert(`Falha ao carregar dados. Verifique se o ID está correto, se a planilha é pública e se o nome da aba foi preenchido corretamente (se necessário).\n\n${error.message}`);
     } finally {
         DOM.loadDataBtn.disabled = false;
     }
