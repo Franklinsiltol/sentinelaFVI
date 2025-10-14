@@ -321,13 +321,14 @@ async function loadData() {
         }
         let text = await response.text();
         
-        const jsonpWrapper = 'google.visualization.Query.setResponse(';
-        if (!text.startsWith(jsonpWrapper)) {
-             throw new Error('Resposta inválida do Google Sheets. Verifique se a planilha é pública e o ID/Nome da Aba estão corretos.');
+        // Remove o prefixo JSONP e qualquer comentário
+        const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);?\s*$/);
+        if (!match) {
+            throw new Error('Formato de resposta não reconhecido. Verifique se a planilha é pública.');
         }
 
-        text = text.substring(jsonpWrapper.length, text.length - 2);
-        const json = JSON.parse(text);
+        const jsonText = match[1];
+        const json = JSON.parse(jsonText);
 
         if (json.status === 'error') {
             throw new Error(`Erro na API do Google: ${json.errors.map(e => e.detailed_message).join(', ')}`);
@@ -524,7 +525,7 @@ function updateRatingDistributionChart(data) {
 }
 
 function updatePerformanceRadarChart(data) {
-    const stageTotals = CONSTANTS.STAGE_KEYS.map(() => ({ sum: 0, count: 0 }));
+    const stageTotals = CONSTANT_KEYS.map(() => ({ sum: 0, count: 0 }));
     data.forEach(row => {
         CONSTANTS.STAGE_KEYS.forEach((key, i) => {
             const rating = CONSTANTS.RATING_MAP[row[key]];
