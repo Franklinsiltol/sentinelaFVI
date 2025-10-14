@@ -931,7 +931,7 @@
             addDebugInfo(`📝 Cabeçalhos encontrados: ${headers.join(', ')}`);
             
             // Processar cada linha
-            for (let i = 1; i < rows.length; i++) { // Começar da linha 1 para pular cabeçalhos
+            for (let i = 0; i < rows.length; i++) {
                 const row = rows[i];
                 const rowData = {};
                 
@@ -943,9 +943,16 @@
                     }
                 }
                 
+                // Pular linha se estiver vazia
+                if (Object.values(rowData).every(val => val === '')) {
+                    continue;
+                }
+                
                 // Mapear para estrutura interna
                 const mappedData = mapRowData(rowData, i);
-                result.push(mappedData);
+                if (mappedData && mappedData.timestamp) {
+                    result.push(mappedData);
+                }
             }
             
             return result;
@@ -970,6 +977,11 @@
             const liderancaRaw = rowData['BÔNUS: PERCEPÇÃO DE LIDERANÇA 🌟'] || '';
             const rotasRaw = rowData['Quantas rotas foram feitas com esse executivo esse mês?'] || '';
             const feedback_recebido = rowData['Executivo recebeu feedback esse mês?'] || '';
+
+            // Pular linha de cabeçalho
+            if (timestamp === 'Carimbo de data/hora' || !timestamp) {
+                return null;
+            }
 
             // Converter liderança para número
             let lideranca = 0;
@@ -1011,7 +1023,7 @@
             };
 
             // Log de debug para esta linha
-            addDebugInfo(`📋 Linha ${rowIndex}: Preparação=${preparacao}, Sondar=${sondar}, Unir=${unir}, Mostrar=${mostrar}, Ultrapassar=${ultrapassar}, Propor=${propor}, NCG=${ncg}, Liderança=${lideranca}, Rotas=${rotas}, Feedback Recebido=${feedback_recebido}`);
+            addDebugInfo(`📋 Linha ${rowIndex}: Data=${timestamp}, Preparação=${preparacao}, Sondar=${sondar}, Unir=${unir}, Mostrar=${mostrar}, Ultrapassar=${ultrapassar}, Propor=${propor}, NCG=${ncg}, Liderança=${lideranca}, Rotas=${rotas}, Feedback Recebido=${feedback_recebido}`);
 
             return mappedData;
         }
@@ -1047,7 +1059,7 @@
         function processSheetDataFromCSV(data) {
             return data.map((row, index) => {
                 return mapRowData(row, index + 1);
-            });
+            }).filter(item => item !== null);
         }
         
         // Função para usar dados de exemplo
@@ -1091,24 +1103,6 @@
                     lideranca: 4,
                     rotas: 4,
                     feedback_recebido: 'Sim'
-                },
-                {
-                    timestamp: '11/10/2025 10:15:22',
-                    email: 'mariana.silva@sumup.com',
-                    coordenacao: 'Coordenação São Paulo',
-                    polo: 'SP - Capital III',
-                    email_executivo: 'mariana.silva@sumup.com',
-                    preparacao: 'Above',
-                    sondar: 'Meets',
-                    unir: 'Above',
-                    mostrar: 'Above',
-                    ultrapassar: 'Meets',
-                    propor: 'Above',
-                    ncg: '',
-                    feedback: 'Excelente desempenho',
-                    lideranca: 5,
-                    rotas: 3,
-                    feedback_recebido: 'Sim'
                 }
             ];
             
@@ -1138,12 +1132,12 @@
                 const brFormat = timestamp.match(/(\d{1,2})\/(\d{1,2})\/(\d{4}) (\d{1,2}):(\d{1,2}):(\d{1,2})/);
                 if (brFormat) {
                     return new Date(
-                        parseInt(brFormat[3]),
-                        parseInt(brFormat[2]) - 1, // Mês é 0-indexed
-                        parseInt(brFormat[1]),
-                        parseInt(brFormat[4]),
-                        parseInt(brFormat[5]),
-                        parseInt(brFormat[6])
+                        parseInt(brFormat[3]), // ano
+                        parseInt(brFormat[2]) - 1, // mês (0-indexed)
+                        parseInt(brFormat[1]), // dia
+                        parseInt(brFormat[4]), // hora
+                        parseInt(brFormat[5]), // minuto
+                        parseInt(brFormat[6]) // segundo
                     );
                 }
                 
@@ -1165,6 +1159,7 @@
             }
             
             // Se nada funcionar, retornar data atual
+            addDebugInfo(`⚠️ Não foi possível parsear a data: ${timestamp}`);
             return new Date();
         }
         
@@ -1411,7 +1406,7 @@
             };
             
             data.forEach(item => {
-                const executive = item.email_executivo;
+                const executive = item.email_executivo || 'Sem nome';
                 if (!executiveScores[executive]) {
                     executiveScores[executive] = { total: 0, count: 0 };
                 }
@@ -1493,7 +1488,7 @@
             const poloLeadership = {};
             
             data.forEach(item => {
-                const polo = item.polo;
+                const polo = item.polo || 'Sem polo';
                 if (!poloLeadership[polo]) {
                     poloLeadership[polo] = { total: 0, count: 0 };
                 }
@@ -1618,7 +1613,7 @@
             data.forEach(item => {
                 const row = document.createElement('tr');
                 
-                // Formatar data
+                // Formatar data - CORREÇÃO APLICADA
                 const date = parseGoogleSheetsTimestamp(item.timestamp);
                 const formattedDate = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
                 
