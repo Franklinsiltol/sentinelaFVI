@@ -951,75 +951,26 @@
             return result;
         }
         
-        // Função para mapear dados de uma linha
+        // Função para mapear dados de uma linha - VERSÃO CORRIGIDA
         function mapRowData(rowData, rowIndex) {
-            // Função auxiliar para extrair dados com diferentes nomes possíveis de colunas
-            const getValue = (possibleNames) => {
-                for (const name of possibleNames) {
-                    if (rowData[name] !== undefined && rowData[name] !== '') {
-                        return rowData[name];
-                    }
-                }
-                return '';
-            };
-            
-            // Mapear timestamp/data
-            const timestamp = getValue([
-                'Carimbo de data/hora',
-                'Timestamp',
-                'Data',
-                'Carimbo de data'
-            ]);
-            
-            // Mapear avaliações das etapas - USANDO OS NOMES EXATOS DA SUA PLANILHA
-            const preparacao = getValue([
-                'Avalie o desempenho na Preparação',
-                'Preparação',
-                'Preparacao',
-                'Preparar'
-            ]);
-            
-            const sondar = getValue([
-                'Avalie o desempenho na etapa Sondar',
-                'Sondar'
-            ]);
-            
-            const unir = getValue([
-                'Avalie o desempenho na etapa Unir',
-                'Unir'
-            ]);
-            
-            const mostrar = getValue([
-                'Avalie o desempenho na etapa Mostrar',
-                'Mostrar'
-            ]);
-            
-            const ultrapassar = getValue([
-                'Avalie o desempenho na etapa Ultrapassar',
-                'Ultrapassar'
-            ]);
-            
-            const propor = getValue([
-                'Avalie o desempenho na etapa Propor',
-                'Propor'
-            ]);
-            
-            // Mapear NCG
-            const ncg = getValue([
-                'Marque se houve alguma Não Conformidade Grave (desconto de 100 pontos)',
-                'NCG',
-                'Não Conformidade Grave'
-            ]);
-            
-            // Mapear liderança - USANDO O NOME EXATO DA SUA PLANILHA
-            const liderancaRaw = getValue([
-                'BÔNUS: PERCEPÇÃO DE LIDERANÇA 🌟',
-                'BÔNUS: PERCEPÇÃO DE LIDERANÇA',
-                'PERCEPÇÃO DE LIDERANÇA',
-                'Liderança',
-                'Lideranca'
-            ]);
-            
+            // Usar os nomes exatos dos cabeçalhos da sua planilha
+            const timestamp = rowData['Carimbo de data/hora'] || '';
+            const email = rowData['Endereço de e-mail'] || '';
+            const coordenacao = rowData['Coordenação'] || '';
+            const polo = rowData['Polo'] || '';
+            const email_executivo = rowData['E-mail do Executivo'] || '';
+            const preparacao = rowData['Avalie o desempenho na Preparação'] || '';
+            const sondar = rowData['Avalie o desempenho na etapa Sondar'] || '';
+            const unir = rowData['Avalie o desempenho na etapa Unir'] || '';
+            const mostrar = rowData['Avalie o desempenho na etapa Mostrar'] || '';
+            const ultrapassar = rowData['Avalie o desempenho na etapa Ultrapassar'] || '';
+            const propor = rowData['Avalie o desempenho na etapa Propor'] || '';
+            const ncg = rowData['Marque se houve alguma Não Conformidade Grave (desconto de 100 pontos)'] || '';
+            const feedback = rowData['Escreva um feedback sobre o Executivo'] || '';
+            const liderancaRaw = rowData['BÔNUS: PERCEPÇÃO DE LIDERANÇA 🌟'] || '';
+            const rotasRaw = rowData['Quantas rotas foram feitas com esse executivo esse mês?'] || '';
+            const feedback_recebido = rowData['Executivo recebeu feedback esse mês?'] || '';
+
             // Converter liderança para número
             let lideranca = 0;
             if (liderancaRaw) {
@@ -1029,14 +980,8 @@
                     lideranca = parseInt(liderancaRaw) || 0;
                 }
             }
-            
-            // Mapear rotas
-            const rotasRaw = getValue([
-                'Quantas rotas foram feitas com esse executivo esse mês?',
-                'Rotas',
-                'Quantidade de rotas'
-            ]);
-            
+
+            // Converter rotas para número
             let rotas = 0;
             if (rotasRaw) {
                 if (typeof rotasRaw === 'number') {
@@ -1045,13 +990,13 @@
                     rotas = parseInt(rotasRaw) || 0;
                 }
             }
-            
+
             const mappedData = {
                 timestamp: timestamp,
-                email: getValue(['Endereço de e-mail', 'Email', 'E-mail']),
-                coordenacao: getValue(['Coordenação', 'Coordenacao']),
-                polo: getValue(['Polo']),
-                email_executivo: getValue(['E-mail do Executivo', 'Email Executivo']),
+                email: email,
+                coordenacao: coordenacao,
+                polo: polo,
+                email_executivo: email_executivo,
                 preparacao: preparacao,
                 sondar: sondar,
                 unir: unir,
@@ -1059,21 +1004,15 @@
                 ultrapassar: ultrapassar,
                 propor: propor,
                 ncg: ncg,
-                feedback: getValue([
-                    'Escreva um feedback sobre o Executivo',
-                    'Feedback'
-                ]),
+                feedback: feedback,
                 lideranca: lideranca,
                 rotas: rotas,
-                feedback_recebido: getValue([
-                    'Executivo recebeu feedback esse mês?',
-                    'Feedback recebido'
-                ])
+                feedback_recebido: feedback_recebido
             };
-            
+
             // Log de debug para esta linha
-            addDebugInfo(`📋 Linha ${rowIndex}: Preparação=${preparacao}, Sondar=${sondar}, Unir=${unir}, Mostrar=${mostrar}, Ultrapassar=${ultrapassar}, Propor=${propor}, NCG=${ncg}, Liderança=${lideranca}`);
-            
+            addDebugInfo(`📋 Linha ${rowIndex}: Preparação=${preparacao}, Sondar=${sondar}, Unir=${unir}, Mostrar=${mostrar}, Ultrapassar=${ultrapassar}, Propor=${propor}, NCG=${ncg}, Liderança=${lideranca}, Rotas=${rotas}, Feedback Recebido=${feedback_recebido}`);
+
             return mappedData;
         }
         
@@ -1178,7 +1117,7 @@
             updateFilters(currentData);
         }
         
-        // Função para converter timestamp do Google Sheets para Date
+        // Função para converter timestamp do Google Sheets para Date - CORRIGIDA
         function parseGoogleSheetsTimestamp(timestamp) {
             // Se for um objeto Date, retornar diretamente
             if (timestamp instanceof Date) {
@@ -1195,13 +1134,26 @@
             
             // Se for uma string, tentar parsear
             if (typeof timestamp === 'string') {
-                // Tentar formato brasileiro dd/mm/aaaa
-                const brFormat = timestamp.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+                // Tentar formato brasileiro dd/mm/aaaa hh:mm:ss
+                const brFormat = timestamp.match(/(\d{1,2})\/(\d{1,2})\/(\d{4}) (\d{1,2}):(\d{1,2}):(\d{1,2})/);
                 if (brFormat) {
                     return new Date(
                         parseInt(brFormat[3]),
                         parseInt(brFormat[2]) - 1, // Mês é 0-indexed
-                        parseInt(brFormat[1])
+                        parseInt(brFormat[1]),
+                        parseInt(brFormat[4]),
+                        parseInt(brFormat[5]),
+                        parseInt(brFormat[6])
+                    );
+                }
+                
+                // Tentar formato brasileiro dd/mm/aaaa
+                const brDateOnly = timestamp.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+                if (brDateOnly) {
+                    return new Date(
+                        parseInt(brDateOnly[3]),
+                        parseInt(brDateOnly[2]) - 1,
+                        parseInt(brDateOnly[1])
                     );
                 }
                 
@@ -1244,13 +1196,13 @@
             }
         }
         
-        // As funções restantes permanecem as mesmas
         function updateDashboard(data) {
             updateKPIs(data);
             updateCharts(data);
             updateTable(data);
         }
         
+        // Função para atualizar KPIs - VERSÃO CORRIGIDA
         function updateKPIs(data) {
             // KPI: Avaliações Realizadas
             document.getElementById('kpi-avaliacoes').textContent = data.length;
@@ -1261,13 +1213,19 @@
             document.getElementById('kpi-desempenho').textContent = avgScore.toFixed(1);
             document.getElementById('kpi-trend-desempenho').textContent = data.length > 0 ? '+0.3' : '0.0';
             
-            // KPI: NCGs Identificadas
-            const ncgCount = data.filter(item => item.ncg && item.ncg.toString().toLowerCase() === 'sim').length;
+            // KPI: NCGs Identificadas - CORRIGIDO
+            const ncgCount = data.filter(item => {
+                const ncgValue = item.ncg ? item.ncg.toString().trim() : '';
+                return ncgValue !== '' && ncgValue !== 'Não' && !ncgValue.toLowerCase().includes('não');
+            }).length;
             document.getElementById('kpi-ncgs').textContent = ncgCount;
             document.getElementById('kpi-trend-ncgs').textContent = data.length > 0 ? '-1' : '0';
             
             // KPI: Executivos com Feedback
-            const feedbackCount = data.filter(item => item.feedback_recebido && item.feedback_recebido.toString().toLowerCase() === 'sim').length;
+            const feedbackCount = data.filter(item => {
+                const feedbackValue = item.feedback_recebido ? item.feedback_recebido.toString().trim().toLowerCase() : '';
+                return feedbackValue === 'sim' || feedbackValue === 'yes' || feedbackValue === 'true';
+            }).length;
             const feedbackPercentage = data.length > 0 ? Math.round((feedbackCount / data.length) * 100) : 0;
             document.getElementById('kpi-feedback').textContent = `${feedbackPercentage}%`;
             document.getElementById('kpi-trend-feedback').textContent = data.length > 0 ? '+5%' : '0%';
@@ -1672,6 +1630,11 @@
                     return value || '-';
                 };
                 
+                // Verificar se há NCG
+                const hasNCG = item.ncg && item.ncg.toString().trim() !== '' && 
+                              item.ncg.toString().trim() !== 'Não' && 
+                              !item.ncg.toString().toLowerCase().includes('não');
+                
                 row.innerHTML = `
                     <td>${formattedDate}</td>
                     <td>${item.email_executivo || '-'}</td>
@@ -1683,7 +1646,7 @@
                     <td>${createBadge(item.mostrar)}</td>
                     <td>${createBadge(item.ultrapassar)}</td>
                     <td>${createBadge(item.propor)}</td>
-                    <td>${item.ncg ? '<span class="badge badge-danger">Sim</span>' : '<span class="badge badge-success">Não</span>'}</td>
+                    <td>${hasNCG ? '<span class="badge badge-danger">Sim</span>' : '<span class="badge badge-success">Não</span>'}</td>
                     <td>${item.lideranca || 0}</td>
                     <td>${item.rotas || 0}</td>
                     <td>${item.feedback_recebido === 'Sim' ? '<span class="badge badge-success">Sim</span>' : '<span class="badge badge-warning">Não</span>'}</td>
