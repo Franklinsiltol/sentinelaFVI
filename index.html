@@ -524,27 +524,9 @@
                 <div class="form-group" style="margin-top: 15px;">
                     <p style="font-size: 0.9rem; color: #666;">
                         <i class="fas fa-info-circle"></i> Para funcionar, a planilha precisa estar configurada como pública.
-                        <a href="#" id="setup-guide-link">Clique aqui para ver como configurar.</a>
                     </p>
                 </div>
                 <div id="connection-status" style="margin-top: 15px; padding: 10px; border-radius: 6px; display: none;"></div>
-                
-                <!-- Setup Guide (inicialmente oculto) -->
-                <div id="setup-guide" style="display: none; margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 6px;">
-                    <h4>📋 Como configurar sua planilha para acesso público:</h4>
-                    <ol style="margin-left: 20px; margin-top: 10px;">
-                        <li>Abra sua planilha no Google Sheets</li>
-                        <li>Clique em <strong>"Arquivo" → "Compartilhar" → "Compartilhar com outras pessoas"</strong></li>
-                        <li>Na seção "Obter link", clique em <strong>"Alterar para qualquer pessoa com o link"</strong></li>
-                        <li>Defina a permissão como <strong>"Visualizador"</strong></li>
-                        <li>Clique em <strong>"Concluído"</strong></li>
-                        <li>Copie o ID da planilha da URL (o código entre /d/ e /edit)</li>
-                        <li>Cole o ID no campo acima e clique em "Conectar"</li>
-                    </ol>
-                    <p style="margin-top: 10px; font-style: italic;">
-                        Exemplo de URL: https://docs.google.com/spreadsheets/d/<strong>1NsGJ5BDGLyx_FyY9hCrtmCzUmzx0X4Hw36JgYnKfuYk</strong>/edit
-                    </p>
-                </div>
             </div>
 
             <!-- Filters -->
@@ -727,13 +709,6 @@
             // Inicializar com dados vazios
             updateDashboard([]);
             
-            // Mostrar/ocultar guia de configuração
-            document.getElementById('setup-guide-link').addEventListener('click', function(e) {
-                e.preventDefault();
-                const guide = document.getElementById('setup-guide');
-                guide.style.display = guide.style.display === 'none' ? 'block' : 'none';
-            });
-            
             // Conectar botão
             document.getElementById('connect-btn').addEventListener('click', function() {
                 const spreadsheetId = document.getElementById('spreadsheet-id').value;
@@ -866,7 +841,7 @@
                 const rowData = {};
                 
                 for (let j = 0; j < headers.length; j++) {
-                    if (row.c && row.c[j] && row.c[j].v) {
+                    if (row.c && row.c[j] && row.c[j].v !== undefined) {
                         rowData[headers[j]] = row.c[j].v;
                     } else {
                         rowData[headers[j]] = '';
@@ -874,29 +849,127 @@
                 }
                 
                 // Mapear para estrutura interna
-                const mappedData = {
-                    timestamp: rowData['Carimbo de data/hora'] || '',
-                    email: rowData['Endereço de e-mail'] || '',
-                    coordenacao: rowData['Coordenação'] || '',
-                    polo: rowData['Polo'] || '',
-                    email_executivo: rowData['E-mail do Executivo'] || '',
-                    preparacao: rowData['Avalie o desempenho na Preparação'] || '',
-                    sondar: rowData['Avalie o desempenho na etapa Sondar'] || '',
-                    unir: rowData['Avalie o desempenho na etapa Unir'] || '',
-                    mostrar: rowData['Avalie o desempenho na etapa Mostrar'] || '',
-                    ultrapassar: rowData['Avalie o desempenho na etapa Ultrapassar'] || '',
-                    propor: rowData['Avalie o desempenho na etapa Propor'] || '',
-                    ncg: rowData['Marque se houve alguma Não Conformidade Grave (desconto de 100 pontos)'] || '',
-                    feedback: rowData['Escreva um feedback sobre o Executivo'] || '',
-                    lideranca: parseInt(rowData['BÔNUS: PERCEPÇÃO DE LIDERANÇA 🌟']) || 0,
-                    rotas: parseInt(rowData['Quantas rotas foram feitas com esse executivo esse mês?']) || 0,
-                    feedback_recebido: rowData['Executivo recebeu feedback esse mês?'] || ''
-                };
-                
+                const mappedData = mapRowData(rowData);
                 result.push(mappedData);
             }
             
             return result;
+        }
+        
+        // Função para mapear dados de uma linha
+        function mapRowData(rowData) {
+            // Função auxiliar para extrair dados com diferentes nomes possíveis de colunas
+            const getValue = (possibleNames) => {
+                for (const name of possibleNames) {
+                    if (rowData[name] !== undefined && rowData[name] !== '') {
+                        return rowData[name];
+                    }
+                }
+                return '';
+            };
+            
+            // Mapear timestamp/data
+            const timestamp = getValue([
+                'Carimbo de data/hora',
+                'Timestamp',
+                'Data',
+                'Carimbo de data'
+            ]);
+            
+            // Mapear avaliações das etapas
+            const preparacao = getValue([
+                'Avalie o desempenho na Preparação',
+                'Preparação',
+                'Preparacao'
+            ]);
+            
+            const sondar = getValue([
+                'Avalie o desempenho na etapa Sondar',
+                'Sondar'
+            ]);
+            
+            const unir = getValue([
+                'Avalie o desempenho na etapa Unir',
+                'Unir'
+            ]);
+            
+            const mostrar = getValue([
+                'Avalie o desempenho na etapa Mostrar',
+                'Mostrar'
+            ]);
+            
+            const ultrapassar = getValue([
+                'Avalie o desempenho na etapa Ultrapassar',
+                'Ultrapassar'
+            ]);
+            
+            const propor = getValue([
+                'Avalie o desempenho na etapa Propor',
+                'Propor'
+            ]);
+            
+            // Mapear liderança
+            const liderancaRaw = getValue([
+                'BÔNUS: PERCEPÇÃO DE LIDERANÇA 🌟',
+                'PERCEPÇÃO DE LIDERANÇA',
+                'Liderança',
+                'Lideranca'
+            ]);
+            
+            // Converter liderança para número
+            let lideranca = 0;
+            if (liderancaRaw) {
+                if (typeof liderancaRaw === 'number') {
+                    lideranca = liderancaRaw;
+                } else if (typeof liderancaRaw === 'string') {
+                    lideranca = parseInt(liderancaRaw) || 0;
+                }
+            }
+            
+            // Mapear rotas
+            const rotasRaw = getValue([
+                'Quantas rotas foram feitas com esse executivo esse mês?',
+                'Rotas',
+                'Quantidade de rotas'
+            ]);
+            
+            let rotas = 0;
+            if (rotasRaw) {
+                if (typeof rotasRaw === 'number') {
+                    rotas = rotasRaw;
+                } else if (typeof rotasRaw === 'string') {
+                    rotas = parseInt(rotasRaw) || 0;
+                }
+            }
+            
+            return {
+                timestamp: timestamp,
+                email: getValue(['Endereço de e-mail', 'Email', 'E-mail']),
+                coordenacao: getValue(['Coordenação', 'Coordenacao']),
+                polo: getValue(['Polo']),
+                email_executivo: getValue(['E-mail do Executivo', 'Email Executivo']),
+                preparacao: preparacao,
+                sondar: sondar,
+                unir: unir,
+                mostrar: mostrar,
+                ultrapassar: ultrapassar,
+                propor: propor,
+                ncg: getValue([
+                    'Marque se houve alguma Não Conformidade Grave (desconto de 100 pontos)',
+                    'NCG',
+                    'Não Conformidade Grave'
+                ]),
+                feedback: getValue([
+                    'Escreva um feedback sobre o Executivo',
+                    'Feedback'
+                ]),
+                lideranca: lideranca,
+                rotas: rotas,
+                feedback_recebido: getValue([
+                    'Executivo recebeu feedback esse mês?',
+                    'Feedback recebido'
+                ])
+            };
         }
         
         // Função para processar dados CSV
@@ -929,24 +1002,7 @@
         // Função para processar dados da planilha a partir de CSV
         function processSheetDataFromCSV(data) {
             return data.map(row => {
-                return {
-                    timestamp: row['Carimbo de data/hora'] || '',
-                    email: row['Endereço de e-mail'] || '',
-                    coordenacao: row['Coordenação'] || '',
-                    polo: row['Polo'] || '',
-                    email_executivo: row['E-mail do Executivo'] || '',
-                    preparacao: row['Avalie o desempenho na Preparação'] || '',
-                    sondar: row['Avalie o desempenho na etapa Sondar'] || '',
-                    unir: row['Avalie o desempenho na etapa Unir'] || '',
-                    mostrar: row['Avalie o desempenho na etapa Mostrar'] || '',
-                    ultrapassar: row['Avalie o desempenho na etapa Ultrapassar'] || '',
-                    propor: row['Avalie o desempenho na etapa Propor'] || '',
-                    ncg: row['Marque se houve alguma Não Conformidade Grave (desconto de 100 pontos)'] || '',
-                    feedback: row['Escreva um feedback sobre o Executivo'] || '',
-                    lideranca: parseInt(row['BÔNUS: PERCEPÇÃO DE LIDERANÇA 🌟']) || 0,
-                    rotas: parseInt(row['Quantas rotas foram feitas com esse executivo esse mês?']) || 0,
-                    feedback_recebido: row['Executivo recebeu feedback esse mês?'] || ''
-                };
+                return mapRowData(row);
             });
         }
         
@@ -1015,6 +1071,44 @@
             updateFilters(currentData);
         }
         
+        // Função para converter timestamp do Google Sheets para Date
+        function parseGoogleSheetsTimestamp(timestamp) {
+            // Se for um objeto Date, retornar diretamente
+            if (timestamp instanceof Date) {
+                return timestamp;
+            }
+            
+            // Se for um número (serial do Excel/Google Sheets)
+            if (typeof timestamp === 'number') {
+                // O Google Sheets usa uma base de data de 30 de dezembro de 1899
+                const baseDate = new Date(1899, 11, 30);
+                const millisecondsPerDay = 24 * 60 * 60 * 1000;
+                return new Date(baseDate.getTime() + timestamp * millisecondsPerDay);
+            }
+            
+            // Se for uma string, tentar parsear
+            if (typeof timestamp === 'string') {
+                // Tentar formato brasileiro dd/mm/aaaa
+                const brFormat = timestamp.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+                if (brFormat) {
+                    return new Date(
+                        parseInt(brFormat[3]),
+                        parseInt(brFormat[2]) - 1, // Mês é 0-indexed
+                        parseInt(brFormat[1])
+                    );
+                }
+                
+                // Tentar formato ISO
+                const isoDate = new Date(timestamp);
+                if (!isNaN(isoDate.getTime())) {
+                    return isoDate;
+                }
+            }
+            
+            // Se nada funcionar, retornar data atual
+            return new Date();
+        }
+        
         function showStatus(message, type) {
             const statusEl = document.getElementById('connection-status');
             statusEl.textContent = message;
@@ -1061,12 +1155,12 @@
             document.getElementById('kpi-trend-desempenho').textContent = data.length > 0 ? '+0.3' : '0.0';
             
             // KPI: NCGs Identificadas
-            const ncgCount = data.filter(item => item.ncg && item.ncg.toLowerCase() === 'sim').length;
+            const ncgCount = data.filter(item => item.ncg && item.ncg.toString().toLowerCase() === 'sim').length;
             document.getElementById('kpi-ncgs').textContent = ncgCount;
             document.getElementById('kpi-trend-ncgs').textContent = data.length > 0 ? '-1' : '0';
             
             // KPI: Executivos com Feedback
-            const feedbackCount = data.filter(item => item.feedback_recebido && item.feedback_recebido.toLowerCase() === 'sim').length;
+            const feedbackCount = data.filter(item => item.feedback_recebido && item.feedback_recebido.toString().toLowerCase() === 'sim').length;
             const feedbackPercentage = data.length > 0 ? Math.round((feedbackCount / data.length) * 100) : 0;
             document.getElementById('kpi-feedback').textContent = `${feedbackPercentage}%`;
             document.getElementById('kpi-trend-feedback').textContent = data.length > 0 ? '+5%' : '0%';
@@ -1088,8 +1182,9 @@
                 const stages = ['preparacao', 'sondar', 'unir', 'mostrar', 'ultrapassar', 'propor'];
                 
                 stages.forEach(stage => {
-                    if (item[stage] && scoreMap[item[stage]] !== undefined) {
-                        totalScore += scoreMap[item[stage]];
+                    const value = item[stage];
+                    if (value && scoreMap[value] !== undefined) {
+                        totalScore += scoreMap[value];
                         evaluationCount++;
                     }
                 });
@@ -1131,8 +1226,9 @@
             
             data.forEach(item => {
                 stages.forEach((stage, index) => {
-                    if (item[stage] && counts[item[stage]] !== undefined) {
-                        counts[item[stage]][index]++;
+                    const value = item[stage];
+                    if (value && counts[value] !== undefined) {
+                        counts[value][index]++;
                     }
                 });
             });
@@ -1200,8 +1296,9 @@
             
             data.forEach(item => {
                 stages.forEach(stage => {
-                    if (item[stage] && counts[item[stage]] !== undefined) {
-                        counts[item[stage]]++;
+                    const value = item[stage];
+                    if (value && counts[value] !== undefined) {
+                        counts[value]++;
                     }
                 });
             });
@@ -1256,8 +1353,9 @@
                 
                 const stages = ['preparacao', 'sondar', 'unir', 'mostrar', 'ultrapassar', 'propor'];
                 stages.forEach(stage => {
-                    if (item[stage] && scoreMap[item[stage]] !== undefined) {
-                        executiveScores[executive].total += scoreMap[item[stage]];
+                    const value = item[stage];
+                    if (value && scoreMap[value] !== undefined) {
+                        executiveScores[executive].total += scoreMap[value];
                         executiveScores[executive].count++;
                     }
                 });
@@ -1456,7 +1554,7 @@
                 const row = document.createElement('tr');
                 
                 // Formatar data
-                const date = new Date(item.timestamp);
+                const date = parseGoogleSheetsTimestamp(item.timestamp);
                 const formattedDate = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
                 
                 // Criar badges para as avaliações
@@ -1464,14 +1562,14 @@
                     if (value === 'Below') return '<span class="badge badge-warning">Below</span>';
                     if (value === 'Meets') return '<span class="badge badge-success">Meets</span>';
                     if (value === 'Above') return '<span class="badge badge-success">Above</span>';
-                    return value;
+                    return value || '-';
                 };
                 
                 row.innerHTML = `
                     <td>${formattedDate}</td>
-                    <td>${item.email_executivo}</td>
-                    <td>${item.coordenacao}</td>
-                    <td>${item.polo}</td>
+                    <td>${item.email_executivo || '-'}</td>
+                    <td>${item.coordenacao || '-'}</td>
+                    <td>${item.polo || '-'}</td>
                     <td>${createBadge(item.preparacao)}</td>
                     <td>${createBadge(item.sondar)}</td>
                     <td>${createBadge(item.unir)}</td>
@@ -1479,8 +1577,8 @@
                     <td>${createBadge(item.ultrapassar)}</td>
                     <td>${createBadge(item.propor)}</td>
                     <td>${item.ncg ? '<span class="badge badge-danger">Sim</span>' : '<span class="badge badge-success">Não</span>'}</td>
-                    <td>${item.lideranca}</td>
-                    <td>${item.rotas}</td>
+                    <td>${item.lideranca || 0}</td>
+                    <td>${item.rotas || 0}</td>
                     <td>${item.feedback_recebido === 'Sim' ? '<span class="badge badge-success">Sim</span>' : '<span class="badge badge-warning">Não</span>'}</td>
                 `;
                 
@@ -1571,24 +1669,24 @@
             const csvRows = [headers.join(',')];
             
             currentData.forEach(item => {
-                const date = new Date(item.timestamp);
+                const date = parseGoogleSheetsTimestamp(item.timestamp);
                 const formattedDate = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
                 
                 const row = [
                     formattedDate,
-                    `"${item.email_executivo}"`,
-                    `"${item.coordenacao}"`,
-                    `"${item.polo}"`,
-                    item.preparacao,
-                    item.sondar,
-                    item.unir,
-                    item.mostrar,
-                    item.ultrapassar,
-                    item.propor,
-                    item.ncg,
-                    item.lideranca,
-                    item.rotas,
-                    item.feedback_recebido
+                    `"${item.email_executivo || ''}"`,
+                    `"${item.coordenacao || ''}"`,
+                    `"${item.polo || ''}"`,
+                    item.preparacao || '',
+                    item.sondar || '',
+                    item.unir || '',
+                    item.mostrar || '',
+                    item.ultrapassar || '',
+                    item.propor || '',
+                    item.ncg || '',
+                    item.lideranca || 0,
+                    item.rotas || 0,
+                    item.feedback_recebido || ''
                 ];
                 
                 csvRows.push(row.join(','));
