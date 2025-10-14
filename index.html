@@ -239,25 +239,13 @@
                         <canvas id="feedbackGivenChart"></canvas>
                     </div>
                 </div>
-                <div class="card">
-                    <h2>⭐ Percepção de Liderança</h2>
-                    <div class="chart-container">
-                        <canvas id="leadershipChart"></canvas>
-                    </div>
-                </div>
                 <div class="card grid-col-span-2">
                     <h2>📝 Feedbacks Escritos</h2>
                     <div id="feedback-table-container">
                         <table id="feedbackTable">
-                            <thead><tr><th>Data/Hora</th><th>Executivo</th><th>Feedback</th></tr></thead>
+                            <thead><tr><th>Executivo</th><th>Feedback</th></tr></thead>
                             <tbody></tbody>
                         </table>
-                    </div>
-                </div>
-                <div class="card grid-col-span-2">
-                    <h2>📈 Evolução da Média Geral (Mês a Mês)</h2>
-                    <div class="chart-container">
-                        <canvas id="timelineChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -360,14 +348,7 @@ async function loadData() {
                     .replace(/Avalie o desempenho na /i, '')
                     .replace(/Avalie o desempenho /i, '')
                     .trim();
-                // Destacar primeira letra (exceto Preparação)
-                let displayLabel = label;
-                if (!label.toLowerCase().startsWith('prepar')) {
-                    const firstLetter = label.charAt(0);
-                    const rest = label.slice(1);
-                    displayLabel = `<strong>${firstLetter}</strong>${rest}`;
-                }
-                STAGE_LABELS.push(displayLabel);
+                STAGE_LABELS.push(label);
             }
         });
 
@@ -442,8 +423,6 @@ function updateDashboard(data) {
     updateEvalsByCoordChart(data);
     updateFeedbackGivenChart(data);
     updateFeedbackTable(data);
-    updateLeadershipChart(data);
-    updateTimelineChart(data);
 }
 
 function updateKPIs(data) {
@@ -456,24 +435,6 @@ function updateKPIs(data) {
                 totalScore += CONSTANTS.RATING_MAP[row[key]];
                 totalRatings++;
             }
-        });
-    });
-    // Converter para escala de 0 a 100
-    const avgScore = totalRatings > 0 ? ((totalScore / totalRatings - 1) * 50).toFixed(1) : 'N/A';
-    document.getElementById('kpi-avg').textContent = avgScore !== 'N/A' ? avgScore : 'N/A';
-
-    // Contar não conformidades quando há qualquer valor preenchido
-    const nonComplianceCount = data.filter(row => {
-        const ncValue = row['marque_se_houve_alguma_nao_conformidade_gravedesconto_de_100_pontos'];
-        return ncValue && ncValue.toString().trim() !== '';
-    }).length;
-    document.getElementById('kpi-non-compliance').textContent = nonComplianceCount;
-
-    // Contar apenas os "Sim" para feedback
-    const feedbackReceivedCount = data.filter(row => row['executivo_recebeu_feedback_esse_mes'] === 'Sim').length;
-    const feedbackPercentage = data.length > 0 ? ((feedbackReceivedCount / data.length) * 100).toFixed(0) + '%' : 'N/A';
-    document.getElementById('kpi-feedback-received').textContent = feedbackPercentage;
-}
         });
     });
     const avgScore = totalRatings > 0 ? (totalScore / totalRatings).toFixed(2) : 'N/A';
@@ -511,8 +472,6 @@ function createCharts() {
     createOrUpdateChart('performanceRadarChart', 'radar', emptyData, { ...commonOptions, scales: { r: { beginAtZero: true, max: 3 } } });
     createOrUpdateChart('evalsByCoordChart', 'bar', emptyData, { ...commonOptions, indexAxis: 'y' });
     createOrUpdateChart('feedbackGivenChart', 'pie', emptyData, commonOptions);
-    createOrUpdateChart('leadershipChart', 'bar', emptyData, { ...commonOptions, indexAxis: 'y' });
-    createOrUpdateChart('timelineChart', 'line', emptyData, commonOptions);
 }
 
 function updatePerformanceByStageChart(data) {
@@ -652,118 +611,6 @@ function updateFeedbackGivenChart(data) {
     createOrUpdateChart('feedbackGivenChart', 'pie', chartData, { responsive: true, maintainAspectRatio: false });
 }
 
-function updateLeadershipChart(data) {
-    const leadershipByExec = {};
-    
-    data.forEach(row => {
-        const exec = row.email_do_executivo || 'N/A';
-        const leadershipKey = Object.keys(row).find(key => 
-            key.includes('percepcao') || key.includes('lideranca') || key.includes('bonus')
-        );
-        
-        if (leadershipKey && row[leadershipKey]) {
-            const value = parseFloat(row[leadershipKey]);
-            if (!isNaN(value)) {
-                if (!leadershipByExec[exec]) {
-                    leadershipByExec[exec] = { sum: 0, count: 0 };
-                }
-                leadershipByExec[exec].sum += value;
-                leadershipByExec[exec].count++;
-            }
-        }
-    });
-
-    const executives = [];
-    const averages = [];
-    
-    Object.entries(leadershipByExec).forEach(([exec, data]) => {
-        executives.push(exec);
-        averages.push((data.sum / data.count).toFixed(1));
-    });
-
-    const chartData = {
-        labels: executives,
-        datasets: [{
-            label: 'Média de Estrelas ⭐',
-            data: averages,
-            backgroundColor: 'rgba(255, 193, 7, 0.7)',
-            borderColor: 'rgba(255, 193, 7, 1)',
-            borderWidth: 1
-        }]
-    };
-    
-    createOrUpdateChart('leadershipChart', 'bar', chartData, {
-        responsive: true,
-        maintainAspectRatio: false,
-        indexAxis: 'y',
-        scales: {
-            x: { beginAtZero: true, max: 5 }
-        }
-    });
-}
-
-function updateTimelineChart(data) {
-    const monthlyData = {};
-    
-    data.forEach(row => {
-        const timestampKey = Object.keys(row).find(key => 
-            key.includes('carimbo') || key.includes('timestamp') || key.includes('data')
-        );
-        
-        if (timestampKey && row[timestampKey]) {
-            const dateStr = row[timestampKey];
-            const match = dateStr.match(/(\d{2})\/(\d{2})\/(\d{4})/);
-            if (match) {
-                const monthYear = `${match[2]}/${match[3]}`;
-                
-                if (!monthlyData[monthYear]) {
-                    monthlyData[monthYear] = { sum: 0, count: 0 };
-                }
-                
-                STAGE_KEYS.forEach(key => {
-                    if (CONSTANTS.RATING_MAP[row[key]]) {
-                        monthlyData[monthYear].sum += CONSTANTS.RATING_MAP[row[key]];
-                        monthlyData[monthYear].count++;
-                    }
-                });
-            }
-        }
-    });
-
-    const sortedMonths = Object.keys(monthlyData).sort((a, b) => {
-        const [monthA, yearA] = a.split('/');
-        const [monthB, yearB] = b.split('/');
-        return new Date(yearA, monthA - 1) - new Date(yearB, monthB - 1);
-    });
-
-    const averages = sortedMonths.map(month => {
-        const data = monthlyData[month];
-        const avg = data.count > 0 ? (data.sum / data.count - 1) * 50 : 0;
-        return avg.toFixed(1);
-    });
-
-    const chartData = {
-        labels: sortedMonths,
-        datasets: [{
-            label: 'Média Geral (%)',
-            data: averages,
-            backgroundColor: 'rgba(0, 0, 0, 0.1)',
-            borderColor: 'rgba(0, 0, 0, 1)',
-            borderWidth: 2,
-            tension: 0.4,
-            fill: true
-        }]
-    };
-    
-    createOrUpdateChart('timelineChart', 'line', chartData, {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-            y: { beginAtZero: true, max: 100 }
-        }
-    });
-}
-
 function updateFeedbackTable(data) {
     DOM.feedbackTableBody.innerHTML = '';
     const fragment = document.createDocumentFragment();
@@ -771,13 +618,7 @@ function updateFeedbackTable(data) {
         const feedback = row['escreva_um_feedback_sobre_o_executivo'];
         if (feedback) {
             const tr = document.createElement('tr');
-            const timestamp = row['carimbo_de_data_hora'] || row['carimbo_de_datetime'] || row['timestamp'] || 'N/A';
-            tr.innerHTML = `<td>${timestamp}</td><td>${row.email_do_executivo || 'N/A'}</td><td>${feedback}</td>`;
-            fragment.appendChild(tr);
-        }
-    });
-    DOM.feedbackTableBody.appendChild(fragment);
-}</td><td>${feedback}</td>`;
+            tr.innerHTML = `<td>${row.email_do_executivo || 'N/A'}</td><td>${feedback}</td>`;
             fragment.appendChild(tr);
         }
     });
