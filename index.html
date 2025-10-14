@@ -653,7 +653,6 @@ function updateFeedbackGivenChart(data) {
 }
 
 function updateLeadershipChart(data) {
-    // Agrupar por executivo e calcular média de percepção de liderança
     const leadershipByExec = {};
     
     data.forEach(row => {
@@ -704,7 +703,6 @@ function updateLeadershipChart(data) {
 }
 
 function updateTimelineChart(data) {
-    // Agrupar por mês
     const monthlyData = {};
     
     data.forEach(row => {
@@ -714,16 +712,14 @@ function updateTimelineChart(data) {
         
         if (timestampKey && row[timestampKey]) {
             const dateStr = row[timestampKey];
-            // Tentar extrair mês/ano (formato: DD/MM/YYYY)
             const match = dateStr.match(/(\d{2})\/(\d{2})\/(\d{4})/);
             if (match) {
-                const monthYear = `${match[2]}/${match[3]}`; // MM/YYYY
+                const monthYear = `${match[2]}/${match[3]}`;
                 
                 if (!monthlyData[monthYear]) {
                     monthlyData[monthYear] = { sum: 0, count: 0 };
                 }
                 
-                // Calcular score para esta linha
                 STAGE_KEYS.forEach(key => {
                     if (CONSTANTS.RATING_MAP[row[key]]) {
                         monthlyData[monthYear].sum += CONSTANTS.RATING_MAP[row[key]];
@@ -734,7 +730,6 @@ function updateTimelineChart(data) {
         }
     });
 
-    // Ordenar por data
     const sortedMonths = Object.keys(monthlyData).sort((a, b) => {
         const [monthA, yearA] = a.split('/');
         const [monthB, yearB] = b.split('/');
