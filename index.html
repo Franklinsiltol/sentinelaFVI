@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sentinela 🕵️ (Versão Pública)</title>
+    <title>Sentinela 🕵️</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,13 +24,10 @@
             color: var(--text-color);
             margin: 0;
             padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
         }
         .container {
-            width: 100%;
             max-width: 1600px;
+            margin: 0 auto;
         }
         header {
             text-align: center;
@@ -52,7 +49,7 @@
             display: flex;
             flex-wrap: wrap;
             gap: 16px;
-            align-items: center;
+            align-items: flex-end;
         }
         .input-group {
             display: flex;
@@ -82,7 +79,6 @@
             font-weight: 500;
             cursor: pointer;
             transition: opacity 0.2s;
-            align-self: flex-end;
         }
         button:hover {
             opacity: 0.85;
@@ -165,12 +161,12 @@
 
         <div class="card config-section">
             <div class="input-group" style="flex-grow: 2;">
-                <label for="sheetId">📄 Google Sheet ID (Planilha deve ser pública)</label>
+                <label for="sheetId">📄 Google Sheet ID</label>
                 <input type="text" id="sheetId" value="1NsGJ5BDGLyx_FyY9hCrtmCzUmzx0X4Hw36JgYnKfuYk">
             </div>
             <div class="input-group" style="flex-grow: 1;">
-                <label for="sheetName">📝 Nome da Aba (Ex: Página1)</label>
-                <input type="text" id="sheetName" placeholder="Deixe em branco se for a primeira aba">
+                <label for="sheetName">📝 Nome da Aba</label>
+                <input type="text" id="sheetName" placeholder="Opcional">
             </div>
             <button id="loadDataBtn">Carregar Dados</button>
         </div>
@@ -254,7 +250,7 @@
                 </div>
             </div>
         </div>
-        <div id="loader">Aguardando carregamento dos dados... ⏳</div>
+        <div id="loader">Aguardando carregamento... ⏳</div>
     </div>
 
 <script>
@@ -277,7 +273,6 @@ const CONSTANTS = {
 
 let STAGE_KEYS = [];
 let STAGE_LABELS = [];
-
 let allData = [];
 let charts = {};
 
@@ -288,23 +283,10 @@ DOM.loadDataBtn.addEventListener('click', loadData);
 
 function normalizeHeader(header) {
     if (typeof header !== 'string') return '';
-    
-    let normalized = header.toLowerCase()
+    return header.toLowerCase()
         .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-        .trim();
-    
-    // Remove prefixos comuns
-    normalized = normalized
-        .replace(/^avalie\s+o\s+desempenho\s+na\s+etapa\s+/i, '')
-        .replace(/^avalie\s+o\s+desempenho\s+na\s+/i, '')
-        .replace(/^avalie\s+o\s+desempenho\s+/i, '');
-    
-    // Remove caracteres especiais e substitui espaços por underscore
-    normalized = normalized
         .replace(/\s+/g, '_')
         .replace(/[^a-z0-9_]/g, '');
-    
-    return normalized;
 }
 
 async function loadData() {
@@ -319,7 +301,7 @@ async function loadData() {
     DOM.loadDataBtn.disabled = true;
     DOM.loader.style.display = 'block';
     DOM.dashboardContent.style.display = 'none';
-    DOM.loader.textContent = 'Carregando dados da planilha... ⏳';
+    DOM.loader.textContent = 'Carregando dados... ⏳';
 
     let url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`;
     if (sheetName) {
@@ -333,39 +315,34 @@ async function loadData() {
         }
         let text = await response.text();
         
-        // Remove o prefixo JSONP e qualquer comentário
         const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);?\s*$/);
         if (!match) {
-            throw new Error('Formato de resposta não reconhecido. Verifique se a planilha é pública.');
+            throw new Error('Formato inválido. Verifique se a planilha é pública.');
         }
 
-        const jsonText = match[1];
-        const json = JSON.parse(jsonText);
+        const json = JSON.parse(match[1]);
 
         if (json.status === 'error') {
-            throw new Error(`Erro na API do Google: ${json.errors.map(e => e.detailed_message).join(', ')}`);
+            throw new Error(`Erro: ${json.errors.map(e => e.detailed_message).join(', ')}`);
         }
 
         const table = json.table;
         if (!table || !table.rows || table.rows.length === 0) {
-            throw new Error('Nenhum dado encontrado. Verifique se a planilha tem dados, está pública e se o nome da aba está correto.');
+            throw new Error('Nenhum dado encontrado.');
         }
 
         const raw_headers = table.cols.map(col => col.label);
         const dataRows = table.rows.map(row => row.c.map(cell => (cell ? (cell.f || cell.v) : '')));
-        
         const headers = raw_headers.map(normalizeHeader);
 
-        // Identificar automaticamente as colunas de avaliação
+        // Identificar colunas de avaliação
         STAGE_KEYS = [];
         STAGE_LABELS = [];
         
         headers.forEach((header, index) => {
             const originalHeader = raw_headers[index];
-            // Procurar por colunas que contenham "Avalie o desempenho"
             if (originalHeader && originalHeader.includes('Avalie o desempenho')) {
                 STAGE_KEYS.push(header);
-                // Extrair o nome da etapa do header original
                 let label = originalHeader
                     .replace(/Avalie o desempenho na etapa /i, '')
                     .replace(/Avalie o desempenho na /i, '')
@@ -378,21 +355,13 @@ async function loadData() {
         allData = dataRows.map(row => {
             const entry = {};
             headers.forEach((header, i) => {
-                if (header) {
-                    entry[header] = row[i] || '';
-                }
+                if (header) entry[header] = row[i] || '';
             });
             return entry;
         });
 
-        console.log('✅ Colunas de avaliação encontradas:', STAGE_LABELS);
-        console.log('✅ STAGE_KEYS:', STAGE_KEYS);
-        console.log('✅ Exemplo de valores da primeira linha:');
-        STAGE_KEYS.forEach((key, i) => {
-            console.log(`   ${STAGE_LABELS[i]}: ${allData[0][key]}`);
-        });
-            return entry;
-        });
+        console.log('✅ Etapas encontradas:', STAGE_LABELS);
+        console.log('✅ Exemplo:', allData[0]);
 
         populateFilters();
         applyFiltersAndRender();
@@ -401,21 +370,16 @@ async function loadData() {
         DOM.dashboardContent.style.display = 'block';
 
     } catch (error) {
-        DOM.loader.textContent = `❌ Erro ao carregar dados: ${error.message}`;
+        DOM.loader.textContent = `❌ Erro: ${error.message}`;
         console.error(error);
-        alert(`Falha ao carregar dados. Verifique se o ID está correto, se a planilha é pública e se o nome da aba foi preenchido corretamente (se necessário).\n\n${error.message}`);
+        alert(`Erro ao carregar dados:\n${error.message}`);
     } finally {
         DOM.loadDataBtn.disabled = false;
     }
 }
 
-
 function populateFilters() {
-    const filters = {
-        coord: new Set(),
-        polo: new Set(),
-        exec: new Set()
-    };
+    const filters = { coord: new Set(), polo: new Set(), exec: new Set() };
 
     allData.forEach(row => {
         if (row.coordenacao) filters.coord.add(row.coordenacao);
@@ -447,10 +411,7 @@ function applyFiltersAndRender() {
                (exec === all || row.email_do_executivo === exec);
     });
 
-    if (Object.keys(charts).length === 0) {
-        createCharts();
-    }
-
+    if (Object.keys(charts).length === 0) createCharts();
     updateDashboard(filteredData);
 }
 
@@ -467,26 +428,13 @@ function updateDashboard(data) {
 function updateKPIs(data) {
     document.getElementById('kpi-total').textContent = data.length;
 
-    let totalScore = 0;
-    let totalRatings = 0;
+    let totalScore = 0, totalRatings = 0;
     data.forEach(row => {
         STAGE_KEYS.forEach(key => {
             if (CONSTANTS.RATING_MAP[row[key]]) {
                 totalScore += CONSTANTS.RATING_MAP[row[key]];
                 totalRatings++;
             }
-        });
-    });
-    const avgScore = totalRatings > 0 ? (totalScore / totalRatings).toFixed(2) : 'N/A';
-    document.getElementById('kpi-avg').textContent = avgScore;
-
-    const nonComplianceCount = data.filter(row => row['marque_se_houve_alguma_nao_conformidade_gravedesconto_de_100_pontos']).length;
-    document.getElementById('kpi-non-compliance').textContent = nonComplianceCount;
-
-    const feedbackReceivedCount = data.filter(row => row['executivo_recebeu_feedback_esse_mes'] === 'Sim').length;
-    const feedbackPercentage = data.length > 0 ? ((feedbackReceivedCount / data.length) * 100).toFixed(0) + '%' : 'N/A';
-    document.getElementById('kpi-feedback-received').textContent = feedbackPercentage;
-}
         });
     });
     const avgScore = totalRatings > 0 ? (totalScore / totalRatings).toFixed(2) : 'N/A';
@@ -521,7 +469,7 @@ function createCharts() {
 
     createOrUpdateChart('performanceByStageChart', 'bar', emptyData, { ...commonOptions, scales: { y: { beginAtZero: true, max: 3 } } });
     createOrUpdateChart('ratingDistributionChart', 'doughnut', emptyData, commonOptions);
-    createOrUpdateChart('performanceRadarChart', 'radar', emptyData, { ...commonOptions, scales: { r: { beginAtZero: true, max: 3, pointLabels: { font: { size: 12 } } } } });
+    createOrUpdateChart('performanceRadarChart', 'radar', emptyData, { ...commonOptions, scales: { r: { beginAtZero: true, max: 3 } } });
     createOrUpdateChart('evalsByCoordChart', 'bar', emptyData, { ...commonOptions, indexAxis: 'y' });
     createOrUpdateChart('feedbackGivenChart', 'pie', emptyData, commonOptions);
 }
@@ -551,60 +499,26 @@ function updatePerformanceByStageChart(data) {
             borderWidth: 1
         }]
     };
-    createOrUpdateChart('performanceByStageChart', 'bar', chartData, { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 3, ticks: { callback: (v) => { return {1: 'Below', 2: 'Meets', 3: 'Above'}[v] || '' } } } } });
-}));
-
-    data.forEach(row => {
-        CONSTANTS.STAGE_KEYS.forEach((key, i) => {
-            const rating = CONSTANTS.RATING_MAP[row[key]];
-            if (rating) {
-                stageTotals[i].sum += rating;
-                stageTotals[i].count++;
+    createOrUpdateChart('performanceByStageChart', 'bar', chartData, {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                max: 3,
+                ticks: {
+                    callback: (v) => ({ 1: 'Below', 2: 'Meets', 3: 'Above' }[v] || '')
+                }
             }
-        });
+        }
     });
-
-    const averages = stageTotals.map(s => s.count > 0 ? s.sum / s.count : 0);
-
-    const chartData = {
-        labels: CONSTANTS.STAGE_LABELS,
-        datasets: [{
-            label: 'Média de Desempenho',
-            data: averages,
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            borderColor: 'rgba(0, 0, 0, 1)',
-            borderWidth: 1
-        }]
-    };
-    createOrUpdateChart('performanceByStageChart', 'bar', chartData, { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 3, ticks: { callback: (v) => { return {1: 'Below', 2: 'Meets', 3: 'Above'}[v] || '' } } } } });
 }
 
 function updateRatingDistributionChart(data) {
     const counts = { 'Below': 0, 'Meets': 0, 'Above': 0 };
     data.forEach(row => {
         STAGE_KEYS.forEach(key => {
-            if (counts[row[key]] !== undefined) {
-                counts[row[key]]++;
-            }
-        });
-    });
-
-    const chartData = {
-        labels: ['Above', 'Meets', 'Below'],
-        datasets: [{
-            label: 'Distribuição',
-            data: [counts['Above'], counts['Meets'], counts['Below']],
-            backgroundColor: ['#28a745', '#ffc107', '#dc3545'],
-            hoverOffset: 4
-        }]
-    };
-    createOrUpdateChart('ratingDistributionChart', 'doughnut', chartData, { responsive: true, maintainAspectRatio: false });
-};
-    data.forEach(row => {
-        CONSTANTS.STAGE_KEYS.forEach(key => {
-            if (counts[row[key]] !== undefined) {
-                counts[row[key]]++;
-            }
+            if (counts[row[key]] !== undefined) counts[row[key]]++;
         });
     });
 
@@ -647,34 +561,11 @@ function updatePerformanceRadarChart(data) {
             pointHoverBorderColor: 'rgb(0, 0, 0)'
         }]
     };
-    createOrUpdateChart('performanceRadarChart', 'radar', chartData, { responsive: true, maintainAspectRatio: false, scales: { r: { beginAtZero: true, max: 3, min: 0, pointLabels: { font: { size: 10 } } } } });
-}));
-    data.forEach(row => {
-        CONSTANTS.STAGE_KEYS.forEach((key, i) => {
-            const rating = CONSTANTS.RATING_MAP[row[key]];
-            if (rating) {
-                stageTotals[i].sum += rating;
-                stageTotals[i].count++;
-            }
-        });
+    createOrUpdateChart('performanceRadarChart', 'radar', chartData, {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: { r: { beginAtZero: true, max: 3, min: 0 } }
     });
-    const averages = stageTotals.map(s => s.count > 0 ? s.sum / s.count : 0);
-
-    const chartData = {
-        labels: CONSTANTS.STAGE_LABELS,
-        datasets: [{
-            label: 'Média de Performance',
-            data: averages,
-            fill: true,
-            backgroundColor: 'rgba(0, 0, 0, 0.2)',
-            borderColor: 'rgb(0, 0, 0)',
-            pointBackgroundColor: 'rgb(0, 0, 0)',
-            pointBorderColor: '#fff',
-            pointHoverBackgroundColor: '#fff',
-            pointHoverBorderColor: 'rgb(0, 0, 0)'
-        }]
-    };
-    createOrUpdateChart('performanceRadarChart', 'radar', chartData, { responsive: true, maintainAspectRatio: false, scales: { r: { beginAtZero: true, max: 3, min: 0, pointLabels: { font: { size: 10 } } } } });
 }
 
 function updateEvalsByCoordChart(data) {
@@ -694,7 +585,12 @@ function updateEvalsByCoordChart(data) {
             backgroundColor: 'rgba(0, 0, 0, 0.7)'
         }]
     };
-    createOrUpdateChart('evalsByCoordChart', 'bar', chartData, { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } });
+    createOrUpdateChart('evalsByCoordChart', 'bar', chartData, {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: { legend: { display: false } }
+    });
 }
 
 function updateFeedbackGivenChart(data) {
@@ -728,7 +624,6 @@ function updateFeedbackTable(data) {
     });
     DOM.feedbackTableBody.appendChild(fragment);
 }
-
 </script>
 
 </body>
