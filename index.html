@@ -376,6 +376,32 @@
             font-weight: bold;
         }
         
+        /* Debug Panel */
+        .debug-panel {
+            background-color: #fef3c7;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 25px;
+            border: 1px solid #f59e0b;
+        }
+        
+        .debug-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .debug-content {
+            font-family: monospace;
+            font-size: 0.85rem;
+            max-height: 200px;
+            overflow-y: auto;
+            background-color: #fefce8;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
         /* Responsive */
         @media (max-width: 1024px) {
             .charts-grid {
@@ -527,6 +553,17 @@
                     </p>
                 </div>
                 <div id="connection-status" style="margin-top: 15px; padding: 10px; border-radius: 6px; display: none;"></div>
+            </div>
+
+            <!-- Debug Panel -->
+            <div class="debug-panel" id="debug-panel" style="display: none;">
+                <div class="debug-header">
+                    <h4>🐛 Debug - Informações da Planilha</h4>
+                    <button class="btn" id="toggle-debug">Mostrar/Ocultar</button>
+                </div>
+                <div class="debug-content" id="debug-content">
+                    <!-- Debug info will be displayed here -->
+                </div>
             </div>
 
             <!-- Filters -->
@@ -704,6 +741,7 @@
         // Variáveis globais para os gráficos
         let performanceChart, distributionChart, executiveChart, leadershipChart, routesChart;
         let currentData = [];
+        let debugInfo = [];
 
         document.addEventListener('DOMContentLoaded', function() {
             // Inicializar com dados vazios
@@ -726,8 +764,22 @@
                 
                 showStatus('Conectando à planilha...', 'loading');
                 
+                // Limpar debug info
+                debugInfo = [];
+                updateDebugPanel();
+                
                 // Carregar dados da planilha
                 loadSpreadsheetData(spreadsheetId, sheetName);
+            });
+            
+            // Botão para mostrar/ocultar debug
+            document.getElementById('toggle-debug').addEventListener('click', function() {
+                const debugContent = document.getElementById('debug-content');
+                if (debugContent.style.display === 'none') {
+                    debugContent.style.display = 'block';
+                } else {
+                    debugContent.style.display = 'none';
+                }
             });
             
             // Eventos de alteração de filtro
@@ -742,10 +794,33 @@
             });
         });
         
+        // Função para atualizar o painel de debug
+        function updateDebugPanel() {
+            const debugContent = document.getElementById('debug-content');
+            const debugPanel = document.getElementById('debug-panel');
+            
+            if (debugInfo.length > 0) {
+                debugPanel.style.display = 'block';
+                debugContent.innerHTML = debugInfo.join('<br>');
+            } else {
+                debugPanel.style.display = 'none';
+            }
+        }
+        
+        // Função para adicionar informação de debug
+        function addDebugInfo(message) {
+            debugInfo.push(message);
+            updateDebugPanel();
+        }
+        
         // Função para carregar dados da planilha
         function loadSpreadsheetData(spreadsheetId, sheetName) {
+            addDebugInfo(`📊 Tentando conectar com planilha: ${spreadsheetId}`);
+            addDebugInfo(`📄 Aba: ${sheetName}`);
+            
             // Para planilhas públicas, podemos usar uma URL simples
             const publicUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:json&sheet=${sheetName}`;
+            addDebugInfo(`🔗 URL: ${publicUrl}`);
             
             fetch(publicUrl)
                 .then(response => {
@@ -755,13 +830,19 @@
                     return response.text();
                 })
                 .then(data => {
+                    addDebugInfo('✅ Dados brutos recebidos da planilha');
+                    
                     // Processar dados JSON do Google Visualization API
                     const jsonData = JSON.parse(data.substring(47).slice(0, -2));
+                    addDebugInfo(`📋 Estrutura JSON recebida: ${Object.keys(jsonData).join(', ')}`);
+                    
                     currentData = processSheetData(jsonData);
                     
                     if (currentData.length === 0) {
                         throw new Error('A planilha está vazia ou a estrutura não é compatível.');
                     }
+                    
+                    addDebugInfo(`✅ ${currentData.length} registros processados com sucesso`);
                     
                     updateDashboard(currentData);
                     updateFilters(currentData);
@@ -775,6 +856,7 @@
                 })
                 .catch(error => {
                     console.error('Erro ao carregar dados:', error);
+                    addDebugInfo(`❌ Erro: ${error.message}`);
                     
                     // Tentar método alternativo
                     tryAlternativeMethod(spreadsheetId, sheetName);
@@ -783,6 +865,8 @@
         
         // Método alternativo para carregar dados
         function tryAlternativeMethod(spreadsheetId, sheetName) {
+            addDebugInfo('🔄 Tentando método alternativo (CSV)');
+            
             const csvUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${sheetName}`;
             
             fetch(csvUrl)
@@ -793,12 +877,23 @@
                     return response.text();
                 })
                 .then(csvData => {
+                    addDebugInfo('✅ Dados CSV recebidos');
+                    addDebugInfo(`📄 Primeiras 500 caracteres: ${csvData.substring(0, 500)}...`);
+                    
                     const parsedData = parseCSV(csvData);
+                    addDebugInfo(`📊 ${parsedData.length} linhas CSV parseadas`);
+                    
+                    if (parsedData.length > 0) {
+                        addDebugInfo(`📝 Cabeçalhos CSV: ${Object.keys(parsedData[0]).join(', ')}`);
+                    }
+                    
                     currentData = processSheetDataFromCSV(parsedData);
                     
                     if (currentData.length === 0) {
                         throw new Error('A planilha está vazia ou a estrutura não é compatível.');
                     }
+                    
+                    addDebugInfo(`✅ ${currentData.length} registros processados do CSV`);
                     
                     updateDashboard(currentData);
                     updateFilters(currentData);
@@ -812,6 +907,7 @@
                 })
                 .catch(error => {
                     console.error('Erro com método alternativo:', error);
+                    addDebugInfo(`❌ Erro no método alternativo: ${error.message}`);
                     
                     // Usar dados de exemplo como fallback
                     useSampleData();
@@ -827,13 +923,19 @@
         
         // Função para processar dados JSON do Google Visualization
         function processSheetData(jsonData) {
-            if (!jsonData.table || !jsonData.table.rows) return [];
+            if (!jsonData.table || !jsonData.table.rows) {
+                addDebugInfo('❌ Estrutura de dados inválida: table ou rows não encontrados');
+                return [];
+            }
             
             const rows = jsonData.table.rows;
+            addDebugInfo(`📊 Total de linhas na planilha: ${rows.length}`);
+            
             const result = [];
             
             // Obter cabeçalhos
             const headers = jsonData.table.cols.map(col => col.label);
+            addDebugInfo(`📝 Cabeçalhos encontrados: ${headers.join(', ')}`);
             
             // Processar cada linha
             for (let i = 1; i < rows.length; i++) { // Começar da linha 1 para pular cabeçalhos
@@ -849,7 +951,7 @@
                 }
                 
                 // Mapear para estrutura interna
-                const mappedData = mapRowData(rowData);
+                const mappedData = mapRowData(rowData, i);
                 result.push(mappedData);
             }
             
@@ -857,14 +959,18 @@
         }
         
         // Função para mapear dados de uma linha
-        function mapRowData(rowData) {
+        function mapRowData(rowData, rowIndex) {
+            addDebugInfo(`🔍 Processando linha ${rowIndex}: ${JSON.stringify(rowData).substring(0, 200)}...`);
+            
             // Função auxiliar para extrair dados com diferentes nomes possíveis de colunas
             const getValue = (possibleNames) => {
                 for (const name of possibleNames) {
                     if (rowData[name] !== undefined && rowData[name] !== '') {
+                        addDebugInfo(`✅ Encontrado valor para ${name}: ${rowData[name]}`);
                         return rowData[name];
                     }
                 }
+                addDebugInfo(`❌ Nenhum valor encontrado para: ${possibleNames.join(', ')}`);
                 return '';
             };
             
@@ -880,7 +986,8 @@
             const preparacao = getValue([
                 'Avalie o desempenho na Preparação',
                 'Preparação',
-                'Preparacao'
+                'Preparacao',
+                'Preparar'
             ]);
             
             const sondar = getValue([
@@ -913,7 +1020,8 @@
                 'BÔNUS: PERCEPÇÃO DE LIDERANÇA 🌟',
                 'PERCEPÇÃO DE LIDERANÇA',
                 'Liderança',
-                'Lideranca'
+                'Lideranca',
+                'BÔNUS: PERCEPÇÃO DE LIDERANÇA'
             ]);
             
             // Converter liderança para número
@@ -924,6 +1032,7 @@
                 } else if (typeof liderancaRaw === 'string') {
                     lideranca = parseInt(liderancaRaw) || 0;
                 }
+                addDebugInfo(`⭐ Liderança convertida: ${lideranca}`);
             }
             
             // Mapear rotas
@@ -940,9 +1049,10 @@
                 } else if (typeof rotasRaw === 'string') {
                     rotas = parseInt(rotasRaw) || 0;
                 }
+                addDebugInfo(`🔄 Rotas convertidas: ${rotas}`);
             }
             
-            return {
+            const mappedData = {
                 timestamp: timestamp,
                 email: getValue(['Endereço de e-mail', 'Email', 'E-mail']),
                 coordenacao: getValue(['Coordenação', 'Coordenacao']),
@@ -970,6 +1080,10 @@
                     'Feedback recebido'
                 ])
             };
+            
+            addDebugInfo(`📋 Dados mapeados para linha ${rowIndex}: ${JSON.stringify(mappedData)}`);
+            
+            return mappedData;
         }
         
         // Função para processar dados CSV
@@ -1001,13 +1115,15 @@
         
         // Função para processar dados da planilha a partir de CSV
         function processSheetDataFromCSV(data) {
-            return data.map(row => {
-                return mapRowData(row);
+            return data.map((row, index) => {
+                return mapRowData(row, index + 1);
             });
         }
         
         // Função para usar dados de exemplo
         function useSampleData() {
+            addDebugInfo('📋 Usando dados de exemplo para demonstração');
+            
             // Dados de exemplo baseados na estrutura fornecida
             const sampleData = [
                 {
