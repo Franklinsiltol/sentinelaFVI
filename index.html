@@ -120,6 +120,13 @@
             height: 350px;
             width: 100%;
         }
+        .chart-container-square {
+            position: relative;
+            height: 350px;
+            width: 100%;
+            max-width: 350px;
+            margin: 0 auto;
+        }
         .grid-col-span-2 {
             grid-column: span 2;
         }
@@ -147,10 +154,16 @@
             font-size: 1.5rem;
         }
         .timeline-full-width {
-            grid-column: 1 / -1; /* Ocupa todas as colunas */
+            grid-column: 1 / -1;
         }
         .feedback-full-width {
-            grid-column: 1 / -1; /* Ocupa todas as colunas */
+            grid-column: 1 / -1;
+        }
+        .side-by-side {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            grid-column: 1 / -1;
         }
         @media (max-width: 768px) {
             .grid-col-span-2 {
@@ -161,6 +174,13 @@
             }
             .feedback-full-width {
                 grid-column: span 1;
+            }
+            .side-by-side {
+                grid-template-columns: 1fr;
+                grid-column: span 1;
+            }
+            .chart-container-square {
+                max-width: 100%;
             }
             header h1 {
                 font-size: 2rem;
@@ -247,25 +267,30 @@
                         <canvas id="performanceRadarChart"></canvas>
                     </div>
                 </div>
-                <div class="card">
-                    <h2>🏢 Avaliações por Coordenação</h2>
-                    <div class="chart-container">
-                        <canvas id="evalsByCoordChart"></canvas>
+                
+                <div class="side-by-side">
+                    <div class="card">
+                        <h2>🏢 Avaliações por Coordenação</h2>
+                        <div class="chart-container">
+                            <canvas id="evalsByCoordChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h2>🗣️ Feedback Recebido?</h2>
+                        <div class="chart-container-square">
+                            <canvas id="feedbackGivenChart"></canvas>
+                        </div>
                     </div>
                 </div>
-                <div class="card feedback-full-width">
-                    <h2>🗣️ Feedback Recebido?</h2>
-                    <div class="chart-container">
-                        <canvas id="feedbackGivenChart"></canvas>
-                    </div>
-                </div>
+                
                 <div class="card timeline-full-width">
                     <h2>📈 Timeline da Média Geral</h2>
                     <div class="chart-container">
                         <canvas id="timelineChart"></canvas>
                     </div>
                 </div>
-                <div class="card grid-col-span-2">
+                
+                <div class="card feedback-full-width">
                     <h2>📝 Feedbacks Escritos</h2>
                     <div id="feedback-table-container">
                         <table id="feedbackTable">
@@ -301,7 +326,7 @@ let STAGE_KEYS = [];
 let STAGE_LABELS = [];
 let allData = [];
 let charts = {};
-let NON_CONFORMITY_FIELD = ''; // Variável para armazenar o campo de não conformidade
+let NON_CONFORMITY_FIELD = '';
 
 DOM.loadDataBtn.addEventListener('click', loadData);
 [DOM.coordFilter, DOM.poloFilter, DOM.execFilter].forEach(el => {
@@ -317,21 +342,18 @@ function normalizeHeader(header) {
 }
 
 function findNonConformityField(headers, raw_headers) {
-    // Procurar por campos relacionados a não conformidade
     const ncKeywords = ['nao_conformidade', 'non_conformity', 'nao_conformidades', 'conformidade', 'conformity'];
     
     for (let i = 0; i < headers.length; i++) {
         const header = headers[i];
         const rawHeader = raw_headers[i].toLowerCase();
         
-        // Verificar se o header contém alguma palavra-chave
         if (ncKeywords.some(keyword => header.includes(keyword) || rawHeader.includes('não conformidade'))) {
             console.log('✅ Campo de não conformidade encontrado:', header, '->', raw_headers[i]);
             return header;
         }
     }
     
-    // Se não encontrar, tentar encontrar por padrões comuns
     for (let i = 0; i < headers.length; i++) {
         const header = headers[i];
         const rawHeader = raw_headers[i].toLowerCase();
@@ -427,7 +449,6 @@ async function loadData() {
         const dataRows = table.rows.map(row => row.c.map(cell => (cell ? (cell.f || cell.v) : '')));
         const headers = raw_headers.map(normalizeHeader);
 
-        // Identificar colunas de avaliação
         STAGE_KEYS = [];
         STAGE_LABELS = [];
         
@@ -444,7 +465,6 @@ async function loadData() {
             }
         });
 
-        // Identificar campo de não conformidade
         NON_CONFORMITY_FIELD = findNonConformityField(headers, raw_headers);
 
         allData = dataRows.map(row => {
@@ -525,12 +545,10 @@ function updateDashboard(data) {
 function updateKPIs(data) {
     document.getElementById('kpi-total').textContent = data.length;
 
-    // Média geral em escala 0-100
     let totalScore = 0, totalRatings = 0;
     data.forEach(row => {
         STAGE_KEYS.forEach(key => {
             if (CONSTANTS.RATING_MAP[row[key]]) {
-                // Converter para escala 0-100: (rating-1)/2 * 100
                 const score = ((CONSTANTS.RATING_MAP[row[key]] - 1) / 2) * 100;
                 totalScore += score;
                 totalRatings++;
@@ -540,17 +558,14 @@ function updateKPIs(data) {
     const avgScore = totalRatings > 0 ? Math.round(totalScore / totalRatings) : 0;
     document.getElementById('kpi-avg').textContent = avgScore;
 
-    // Não conformidades - CORREÇÃO: contar sempre que houver qualquer valor preenchido
     let nonComplianceCount = 0;
     
     if (NON_CONFORMITY_FIELD) {
         nonComplianceCount = data.filter(row => {
             const ncValue = row[NON_CONFORMITY_FIELD];
-            // Contar como não conformidade se houver qualquer valor preenchido
             return ncValue !== undefined && ncValue !== null && ncValue !== '' && ncValue.toString().trim() !== '';
         }).length;
     } else {
-        // Fallback: procurar em todos os campos por valores de não conformidade
         nonComplianceCount = data.filter(row => {
             return Object.keys(row).some(key => {
                 const value = row[key];
@@ -564,7 +579,6 @@ function updateKPIs(data) {
     
     document.getElementById('kpi-non-compliance').textContent = nonComplianceCount;
 
-    // Feedback recebido - ajustado para considerar respostas "Não"
     const feedbackResponses = data.filter(row => {
         const feedback = row['executivo_recebeu_feedback_esse_mes'];
         return feedback && (feedback === 'Sim' || feedback === 'Não');
@@ -576,7 +590,6 @@ function updateKPIs(data) {
         Math.round((feedbackReceivedCount / feedbackResponses.length) * 100) + '%' : '0%';
     document.getElementById('kpi-feedback-received').textContent = feedbackPercentage;
 
-    // Percepção de liderança com estrelas
     const leadershipRating = calculateLeadershipStars(data);
     document.getElementById('kpi-leadership').innerHTML = 
         `<span class="stars">${generateStars(leadershipRating)}</span><br>${leadershipRating.toFixed(1)}/5.0`;
@@ -612,17 +625,9 @@ function createCharts() {
     });
     createOrUpdateChart('evalsByCoordChart', 'bar', emptyData, { ...commonOptions, indexAxis: 'y' });
     
-    // Gráfico de feedbacks com layout expandido
     createOrUpdateChart('feedbackGivenChart', 'pie', emptyData, {
         ...commonOptions,
-        layout: {
-            padding: {
-                left: 20,
-                right: 20,
-                top: 20,
-                bottom: 20
-            }
-        },
+        maintainAspectRatio: true,
         plugins: {
             legend: {
                 position: 'right',
@@ -655,14 +660,6 @@ function createCharts() {
                     text: 'Mês'
                 }
             }
-        },
-        layout: {
-            padding: {
-                left: 10,
-                right: 10,
-                top: 10,
-                bottom: 10
-            }
         }
     });
 }
@@ -674,7 +671,6 @@ function updatePerformanceByStageChart(data) {
         STAGE_KEYS.forEach((key, i) => {
             const rating = CONSTANTS.RATING_MAP[row[key]];
             if (rating) {
-                // Converter para escala 0-100
                 const score = ((rating - 1) / 2) * 100;
                 stageTotals[i].sum += score;
                 stageTotals[i].count++;
@@ -732,7 +728,6 @@ function updatePerformanceRadarChart(data) {
         STAGE_KEYS.forEach((key, i) => {
             const rating = CONSTANTS.RATING_MAP[row[key]];
             if (rating) {
-                // Converter para escala 0-100
                 const score = ((rating - 1) / 2) * 100;
                 stageTotals[i].sum += score;
                 stageTotals[i].count++;
@@ -812,15 +807,7 @@ function updateFeedbackGivenChart(data) {
     
     createOrUpdateChart('feedbackGivenChart', 'pie', chartData, { 
         responsive: true, 
-        maintainAspectRatio: false,
-        layout: {
-            padding: {
-                left: 50,
-                right: 50,
-                top: 30,
-                bottom: 30
-            }
-        },
+        maintainAspectRatio: true,
         plugins: {
             legend: {
                 position: 'right',
@@ -853,7 +840,6 @@ function updateFeedbackTable(data) {
         const feedback = row['escreva_um_feedback_sobre_o_executivo'];
         if (feedback) {
             const tr = document.createElement('tr');
-            // Incluir timestamp se disponível
             const timestamp = row.carimbo_de_datahora || row.timestamp || 'N/A';
             tr.innerHTML = `
                 <td>${row.email_do_executivo || 'N/A'}</td>
@@ -868,11 +854,9 @@ function updateFeedbackTable(data) {
 }
 
 function updateTimelineChart(data) {
-    // Agrupar dados por mês
     const monthlyData = {};
     
     data.forEach(row => {
-        // Tentar encontrar timestamp - verificar várias colunas possíveis
         const timestamp = row.carimbo_de_datahora || row.timestamp || row.data;
         if (!timestamp) return;
         
@@ -884,7 +868,6 @@ function updateTimelineChart(data) {
                 monthlyData[monthYear] = { sum: 0, count: 0 };
             }
             
-            // Calcular média geral para esta linha
             let rowSum = 0;
             let rowCount = 0;
             
@@ -907,7 +890,6 @@ function updateTimelineChart(data) {
         }
     });
     
-    // Ordenar meses cronologicamente
     const sortedMonths = Object.keys(monthlyData).sort((a, b) => {
         const [monthA, yearA] = a.split('/').map(Number);
         const [monthB, yearB] = b.split('/').map(Number);
@@ -919,7 +901,6 @@ function updateTimelineChart(data) {
         return data.count > 0 ? Math.round(data.sum / data.count) : 0;
     });
     
-    // Calcular linha de tendência (regressão linear simples) que vá do primeiro ao último ponto
     const trendData = calculateFullTrendLine(sortedMonths.length, averages);
     
     const chartData = {
@@ -986,7 +967,6 @@ function updateTimelineChart(data) {
 function calculateFullTrendLine(n, data) {
     if (data.length < 2) return data;
     
-    // Calcular regressão linear para todos os pontos
     let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
     
     for (let i = 0; i < data.length; i++) {
@@ -999,7 +979,6 @@ function calculateFullTrendLine(n, data) {
     const slope = (data.length * sumXY - sumX * sumY) / (data.length * sumXX - sumX * sumX);
     const intercept = (sumY - slope * sumX) / data.length;
     
-    // Gerar pontos da linha de tendência para todos os meses
     return Array.from({length: data.length}, (_, i) => intercept + slope * i);
 }
 </script>
