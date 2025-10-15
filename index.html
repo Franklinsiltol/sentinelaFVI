@@ -159,11 +159,16 @@
         .feedback-full-width {
             grid-column: 1 / -1;
         }
-        .side-by-side {
+        .three-in-row {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr 1fr 1fr;
             gap: 20px;
             grid-column: 1 / -1;
+        }
+        @media (max-width: 1200px) {
+            .three-in-row {
+                grid-template-columns: 1fr 1fr;
+            }
         }
         @media (max-width: 768px) {
             .grid-col-span-2 {
@@ -175,7 +180,7 @@
             .feedback-full-width {
                 grid-column: span 1;
             }
-            .side-by-side {
+            .three-in-row {
                 grid-template-columns: 1fr;
                 grid-column: span 1;
             }
@@ -261,14 +266,14 @@
                         <canvas id="ratingDistributionChart"></canvas>
                     </div>
                 </div>
-                <div class="card">
-                    <h2>📡 Perfil de Desempenho (Radar)</h2>
-                    <div class="chart-container">
-                        <canvas id="performanceRadarChart"></canvas>
-                    </div>
-                </div>
                 
-                <div class="side-by-side">
+                <div class="three-in-row">
+                    <div class="card">
+                        <h2>📡 Perfil de Desempenho (Radar)</h2>
+                        <div class="chart-container">
+                            <canvas id="performanceRadarChart"></canvas>
+                        </div>
+                    </div>
                     <div class="card">
                         <h2>🏢 Avaliações por Coordenação</h2>
                         <div class="chart-container">
