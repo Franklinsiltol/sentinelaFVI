@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sentinela 🕵️</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -150,15 +148,14 @@
                 font-size: 2rem;
             }
         }
+        strong { color: #000; }
     </style>
 </head>
 <body>
-
     <div class="container">
         <header>
             <h1>Sentinela 🕵️ - Dashboard de Performance</h1>
         </header>
-
         <div class="card config-section">
             <div class="input-group" style="flex-grow: 2;">
                 <label for="sheetId">📄 Google Sheet ID</label>
@@ -170,7 +167,6 @@
             </div>
             <button id="loadDataBtn">Carregar Dados</button>
         </div>
-
         <div id="dashboard-content" style="display: none;">
             <div class="card filters-section">
                 <div class="input-group">
@@ -186,7 +182,6 @@
                     <select id="execFilter"><option value="all">Todos</option></select>
                 </div>
             </div>
-
             <div class="card">
                 <div class="kpi-grid">
                     <div class="kpi-item">
@@ -195,7 +190,7 @@
                     </div>
                     <div class="kpi-item">
                         <div id="kpi-avg" class="kpi-value">-</div>
-                        <div class="kpi-label">Média Geral</div>
+                        <div class="kpi-label">Média Geral (%)</div>
                     </div>
                     <div class="kpi-item">
                         <div id="kpi-non-compliance" class="kpi-value">-</div>
@@ -207,7 +202,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="dashboard-grid">
                 <div class="card grid-col-span-2">
                     <h2>📊 Média de Desempenho por Etapa</h2>
@@ -239,20 +233,31 @@
                         <canvas id="feedbackGivenChart"></canvas>
                     </div>
                 </div>
+                <div class="card">
+                    <h2>⭐ Percepção de Liderança</h2>
+                    <div class="chart-container">
+                        <canvas id="leadershipChart"></canvas>
+                    </div>
+                </div>
                 <div class="card grid-col-span-2">
                     <h2>📝 Feedbacks Escritos</h2>
                     <div id="feedback-table-container">
                         <table id="feedbackTable">
-                            <thead><tr><th>Executivo</th><th>Feedback</th></tr></thead>
+                            <thead><tr><th>Data/Hora</th><th>Executivo</th><th>Feedback</th></tr></thead>
                             <tbody></tbody>
                         </table>
+                    </div>
+                </div>
+                <div class="card grid-col-span-2">
+                    <h2>📈 Evolução da Média Geral (Mês a Mês)</h2>
+                    <div class="chart-container">
+                        <canvas id="timelineChart"></canvas>
                     </div>
                 </div>
             </div>
         </div>
         <div id="loader">Aguardando carregamento... ⏳</div>
     </div>
-
 <script>
 const DOM = {
     sheetIdInput: document.getElementById('sheetId'),
@@ -284,7 +289,7 @@ DOM.loadDataBtn.addEventListener('click', loadData);
 function normalizeHeader(header) {
     if (typeof header !== 'string') return '';
     return header.toLowerCase()
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .normalize("NFD").replace(/[̀-ͯ]/g, "")
         .replace(/\s+/g, '_')
         .replace(/[^a-z0-9_]/g, '');
 }
@@ -314,7 +319,7 @@ async function loadData() {
             throw new Error(`Falha na requisição: ${response.statusText}`);
         }
         let text = await response.text();
-        
+
         const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);?\s*$/);
         if (!match) {
             throw new Error('Formato inválido. Verifique se a planilha é pública.');
@@ -335,10 +340,8 @@ async function loadData() {
         const dataRows = table.rows.map(row => row.c.map(cell => (cell ? (cell.f || cell.v) : '')));
         const headers = raw_headers.map(normalizeHeader);
 
-        // Identificar colunas de avaliação
         STAGE_KEYS = [];
         STAGE_LABELS = [];
-        
         headers.forEach((header, index) => {
             const originalHeader = raw_headers[index];
             if (originalHeader && originalHeader.includes('Avalie o desempenho')) {
@@ -348,6 +351,11 @@ async function loadData() {
                     .replace(/Avalie o desempenho na /i, '')
                     .replace(/Avalie o desempenho /i, '')
                     .trim();
+                if (!label.toLowerCase().startsWith('prepar')) {
+                    const firstLetter = label.charAt(0);
+                    const rest = label.slice(1);
+                    label = `<strong>${firstLetter}</strong>${rest}`;
+                }
                 STAGE_LABELS.push(label);
             }
         });
@@ -359,9 +367,6 @@ async function loadData() {
             });
             return entry;
         });
-
-        console.log('✅ Etapas encontradas:', STAGE_LABELS);
-        console.log('✅ Exemplo:', allData[0]);
 
         populateFilters();
         applyFiltersAndRender();
@@ -422,7 +427,9 @@ function updateDashboard(data) {
     updatePerformanceRadarChart(data);
     updateEvalsByCoordChart(data);
     updateFeedbackGivenChart(data);
+    updateLeadershipChart(data);
     updateFeedbackTable(data);
+    updateTimelineChart(data);
 }
 
 function updateKPIs(data) {
@@ -437,10 +444,13 @@ function updateKPIs(data) {
             }
         });
     });
-    const avgScore = totalRatings > 0 ? (totalScore / totalRatings).toFixed(2) : 'N/A';
-    document.getElementById('kpi-avg').textContent = avgScore;
+    const avgScore = totalRatings > 0 ? ((totalScore / totalRatings - 1) * 50).toFixed(1) : 'N/A';
+    document.getElementById('kpi-avg').textContent = avgScore !== 'N/A' ? avgScore : 'N/A';
 
-    const nonComplianceCount = data.filter(row => row['marque_se_houve_alguma_nao_conformidade_gravedesconto_de_100_pontos']).length;
+    const nonComplianceCount = data.filter(row => {
+        const ncValue = row['marque_se_houve_alguma_nao_conformidade_gravedesconto_de_100_pontos'];
+        return ncValue && ncValue.toString().trim() !== '';
+    }).length;
     document.getElementById('kpi-non-compliance').textContent = nonComplianceCount;
 
     const feedbackReceivedCount = data.filter(row => row['executivo_recebeu_feedback_esse_mes'] === 'Sim').length;
@@ -472,6 +482,8 @@ function createCharts() {
     createOrUpdateChart('performanceRadarChart', 'radar', emptyData, { ...commonOptions, scales: { r: { beginAtZero: true, max: 3 } } });
     createOrUpdateChart('evalsByCoordChart', 'bar', emptyData, { ...commonOptions, indexAxis: 'y' });
     createOrUpdateChart('feedbackGivenChart', 'pie', emptyData, commonOptions);
+    createOrUpdateChart('leadershipChart', 'bar', emptyData, { ...commonOptions, indexAxis: 'y' });
+    createOrUpdateChart('timelineChart', 'line', emptyData, commonOptions);
 }
 
 function updatePerformanceByStageChart(data) {
@@ -598,7 +610,7 @@ function updateFeedbackGivenChart(data) {
     data.forEach(row => {
         const val = row['executivo_recebeu_feedback_esse_mes'];
         if (val === 'Sim') counts['Sim']++;
-        else counts['Não']++;
+        else if (val === 'Não') counts['Não']++;
     });
 
     const chartData = {
@@ -611,6 +623,109 @@ function updateFeedbackGivenChart(data) {
     createOrUpdateChart('feedbackGivenChart', 'pie', chartData, { responsive: true, maintainAspectRatio: false });
 }
 
+function updateLeadershipChart(data) {
+    const leadershipByExec = {};
+    data.forEach(row => {
+        const exec = row.email_do_executivo || 'N/A';
+        const leadershipKey = Object.keys(row).find(key =>
+            key.includes('percepcao') || key.includes('lideranca') || key.includes('bonus')
+        );
+        if (leadershipKey && row[leadershipKey]) {
+            const value = parseFloat(row[leadershipKey]);
+            if (!isNaN(value)) {
+                if (!leadershipByExec[exec]) {
+                    leadershipByExec[exec] = { sum: 0, count: 0 };
+                }
+                leadershipByExec[exec].sum += value;
+                leadershipByExec[exec].count++;
+            }
+        }
+    });
+
+    const executives = [];
+    const averages = [];
+    Object.entries(leadershipByExec).forEach(([exec, data]) => {
+        executives.push(exec);
+        averages.push((data.sum / data.count).toFixed(1));
+    });
+
+    const chartData = {
+        labels: executives,
+        datasets: [{
+            label: 'Média de Estrelas ⭐',
+            data: averages,
+            backgroundColor: 'rgba(255, 193, 7, 0.7)',
+            borderColor: 'rgba(255, 193, 7, 1)',
+            borderWidth: 1
+        }]
+    };
+    createOrUpdateChart('leadershipChart', 'bar', chartData, {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        scales: {
+            x: { beginAtZero: true, max: 5 }
+        }
+    });
+}
+
+function updateTimelineChart(data) {
+    const monthlyData = {};
+    data.forEach(row => {
+        const timestampKey = Object.keys(row).find(key =>
+            key.includes('carimbo') || key.includes('timestamp') || key.includes('data')
+        );
+        if (timestampKey && row[timestampKey]) {
+            const dateStr = row[timestampKey];
+            const match = dateStr.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+            if (match) {
+                const monthYear = `${match[2]}/${match[3]}`;
+                if (!monthlyData[monthYear]) {
+                    monthlyData[monthYear] = { sum: 0, count: 0 };
+                }
+                STAGE_KEYS.forEach(key => {
+                    if (CONSTANTS.RATING_MAP[row[key]]) {
+                        monthlyData[monthYear].sum += CONSTANTS.RATING_MAP[row[key]];
+                        monthlyData[monthYear].count++;
+                    }
+                });
+            }
+        }
+    });
+
+    const sortedMonths = Object.keys(monthlyData).sort((a, b) => {
+        const [monthA, yearA] = a.split('/');
+        const [monthB, yearB] = b.split('/');
+        return new Date(yearA, monthA - 1) - new Date(yearB, monthB - 1);
+    });
+
+    const averages = sortedMonths.map(month => {
+        const d = monthlyData[month];
+        const avg = d.count > 0 ? (d.sum / d.count - 1) * 50 : 0;
+        return avg.toFixed(1);
+    });
+
+    const chartData = {
+        labels: sortedMonths,
+        datasets: [{
+            label: 'Média Geral (%)',
+            data: averages,
+            backgroundColor: 'rgba(0, 0, 0, 0.1)',
+            borderColor: 'rgba(0, 0, 0, 1)',
+            borderWidth: 2,
+            tension: 0.4,
+            fill: true
+        }]
+    };
+    createOrUpdateChart('timelineChart', 'line', chartData, {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: { beginAtZero: true, max: 100 }
+        }
+    });
+}
+
 function updateFeedbackTable(data) {
     DOM.feedbackTableBody.innerHTML = '';
     const fragment = document.createDocumentFragment();
@@ -618,13 +733,13 @@ function updateFeedbackTable(data) {
         const feedback = row['escreva_um_feedback_sobre_o_executivo'];
         if (feedback) {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${row.email_do_executivo || 'N/A'}</td><td>${feedback}</td>`;
+            const timestamp = row['carimbo_de_data_hora'] || row['carimbo_de_datetime'] || row['timestamp'] || 'N/A';
+            tr.innerHTML = `<td>${timestamp}</td><td>${row.email_do_executivo || 'N/A'}</td><td>${feedback}</td>`;
             fragment.appendChild(tr);
         }
     });
     DOM.feedbackTableBody.appendChild(fragment);
 }
 </script>
-
 </body>
 </html>
