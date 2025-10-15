@@ -146,8 +146,20 @@
             color: #FFD700;
             font-size: 1.5rem;
         }
+        .timeline-full-width {
+            grid-column: 1 / -1; /* Ocupa todas as colunas */
+        }
+        .feedback-full-width {
+            grid-column: 1 / -1; /* Ocupa todas as colunas */
+        }
         @media (max-width: 768px) {
             .grid-col-span-2 {
+                grid-column: span 1;
+            }
+            .timeline-full-width {
+                grid-column: span 1;
+            }
+            .feedback-full-width {
                 grid-column: span 1;
             }
             header h1 {
@@ -241,13 +253,13 @@
                         <canvas id="evalsByCoordChart"></canvas>
                     </div>
                 </div>
-                <div class="card">
+                <div class="card feedback-full-width">
                     <h2>🗣️ Feedback Recebido?</h2>
                     <div class="chart-container">
                         <canvas id="feedbackGivenChart"></canvas>
                     </div>
                 </div>
-                <div class="card grid-col-span-2">
+                <div class="card timeline-full-width">
                     <h2>📈 Timeline da Média Geral</h2>
                     <div class="chart-container">
                         <canvas id="timelineChart"></canvas>
@@ -599,7 +611,29 @@ function createCharts() {
         scales: { r: { beginAtZero: true, max: 100 } } 
     });
     createOrUpdateChart('evalsByCoordChart', 'bar', emptyData, { ...commonOptions, indexAxis: 'y' });
-    createOrUpdateChart('feedbackGivenChart', 'pie', emptyData, commonOptions);
+    
+    // Gráfico de feedbacks com layout expandido
+    createOrUpdateChart('feedbackGivenChart', 'pie', emptyData, {
+        ...commonOptions,
+        layout: {
+            padding: {
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: 20
+            }
+        },
+        plugins: {
+            legend: {
+                position: 'right',
+                labels: {
+                    boxWidth: 15,
+                    padding: 15
+                }
+            }
+        }
+    });
+    
     createOrUpdateChart('timelineChart', 'line', emptyData, {
         ...commonOptions,
         scales: {
@@ -612,10 +646,22 @@ function createCharts() {
                 }
             },
             x: {
+                offset: true,
+                grid: {
+                    display: true
+                },
                 title: {
                     display: true,
                     text: 'Mês'
                 }
+            }
+        },
+        layout: {
+            padding: {
+                left: 10,
+                right: 10,
+                top: 10,
+                bottom: 10
             }
         }
     });
@@ -758,13 +804,34 @@ function updateFeedbackGivenChart(data) {
         labels: ['Sim', 'Não'],
         datasets: [{
             data: [counts['Sim'], counts['Não']],
-            backgroundColor: ['#28a745', '#dc3545']
+            backgroundColor: ['#28a745', '#dc3545'],
+            borderWidth: 2,
+            borderColor: '#fff'
         }]
     };
+    
     createOrUpdateChart('feedbackGivenChart', 'pie', chartData, { 
         responsive: true, 
         maintainAspectRatio: false,
+        layout: {
+            padding: {
+                left: 50,
+                right: 50,
+                top: 30,
+                bottom: 30
+            }
+        },
         plugins: {
+            legend: {
+                position: 'right',
+                labels: {
+                    boxWidth: 20,
+                    padding: 20,
+                    font: {
+                        size: 14
+                    }
+                }
+            },
             tooltip: {
                 callbacks: {
                     label: function(context) {
@@ -852,8 +919,8 @@ function updateTimelineChart(data) {
         return data.count > 0 ? Math.round(data.sum / data.count) : 0;
     });
     
-    // Calcular linha de tendência (regressão linear simples)
-    const trendData = calculateTrendLine(averages);
+    // Calcular linha de tendência (regressão linear simples) que vá do primeiro ao último ponto
+    const trendData = calculateFullTrendLine(sortedMonths.length, averages);
     
     const chartData = {
         labels: sortedMonths,
@@ -863,6 +930,7 @@ function updateTimelineChart(data) {
                 data: averages,
                 borderColor: 'rgb(0, 0, 0)',
                 backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                borderWidth: 2,
                 tension: 0.4,
                 fill: false
             },
@@ -871,8 +939,9 @@ function updateTimelineChart(data) {
                 data: trendData,
                 borderColor: 'rgb(255, 99, 132)',
                 backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                borderWidth: 2,
                 borderDash: [5, 5],
-                tension: 0.4,
+                tension: 0,
                 fill: false,
                 pointRadius: 0
             }
@@ -889,35 +958,49 @@ function updateTimelineChart(data) {
                 title: {
                     display: true,
                     text: 'Média Geral (0-100)'
+                },
+                grid: {
+                    color: 'rgba(0,0,0,0.1)'
                 }
             },
             x: {
+                offset: true,
+                grid: {
+                    color: 'rgba(0,0,0,0.1)'
+                },
                 title: {
                     display: true,
                     text: 'Mês'
                 }
             }
+        },
+        plugins: {
+            legend: {
+                display: true,
+                position: 'top'
+            }
         }
     });
 }
 
-function calculateTrendLine(data) {
+function calculateFullTrendLine(n, data) {
     if (data.length < 2) return data;
     
-    const n = data.length;
+    // Calcular regressão linear para todos os pontos
     let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
     
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; i < data.length; i++) {
         sumX += i;
         sumY += data[i];
         sumXY += i * data[i];
         sumXX += i * i;
     }
     
-    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-    const intercept = (sumY - slope * sumX) / n;
+    const slope = (data.length * sumXY - sumX * sumY) / (data.length * sumXX - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / data.length;
     
-    return Array.from({length: n}, (_, i) => intercept + slope * i);
+    // Gerar pontos da linha de tendência para todos os meses
+    return Array.from({length: data.length}, (_, i) => intercept + slope * i);
 }
 </script>
 
