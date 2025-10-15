@@ -289,6 +289,7 @@ let STAGE_KEYS = [];
 let STAGE_LABELS = [];
 let allData = [];
 let charts = {};
+let NON_CONFORMITY_FIELD = ''; // Variável para armazenar o campo de não conformidade
 
 DOM.loadDataBtn.addEventListener('click', loadData);
 [DOM.coordFilter, DOM.poloFilter, DOM.execFilter].forEach(el => {
@@ -301,6 +302,36 @@ function normalizeHeader(header) {
         .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
         .replace(/\s+/g, '_')
         .replace(/[^a-z0-9_]/g, '');
+}
+
+function findNonConformityField(headers, raw_headers) {
+    // Procurar por campos relacionados a não conformidade
+    const ncKeywords = ['nao_conformidade', 'non_conformity', 'nao_conformidades', 'conformidade', 'conformity'];
+    
+    for (let i = 0; i < headers.length; i++) {
+        const header = headers[i];
+        const rawHeader = raw_headers[i].toLowerCase();
+        
+        // Verificar se o header contém alguma palavra-chave
+        if (ncKeywords.some(keyword => header.includes(keyword) || rawHeader.includes('não conformidade'))) {
+            console.log('✅ Campo de não conformidade encontrado:', header, '->', raw_headers[i]);
+            return header;
+        }
+    }
+    
+    // Se não encontrar, tentar encontrar por padrões comuns
+    for (let i = 0; i < headers.length; i++) {
+        const header = headers[i];
+        const rawHeader = raw_headers[i].toLowerCase();
+        
+        if (rawHeader.includes('conform') || rawHeader.includes('desconto') || rawHeader.includes('grave')) {
+            console.log('✅ Campo de não conformidade encontrado (padrão):', header, '->', raw_headers[i]);
+            return header;
+        }
+    }
+    
+    console.log('❌ Nenhum campo de não conformidade encontrado. Headers disponíveis:', headers);
+    return null;
 }
 
 function calculateLeadershipStars(data) {
@@ -401,6 +432,9 @@ async function loadData() {
             }
         });
 
+        // Identificar campo de não conformidade
+        NON_CONFORMITY_FIELD = findNonConformityField(headers, raw_headers);
+
         allData = dataRows.map(row => {
             const entry = {};
             headers.forEach((header, i) => {
@@ -410,6 +444,7 @@ async function loadData() {
         });
 
         console.log('✅ Etapas encontradas:', STAGE_LABELS);
+        console.log('✅ Campo de não conformidade:', NON_CONFORMITY_FIELD);
         console.log('✅ Exemplo:', allData[0]);
 
         populateFilters();
@@ -494,17 +529,26 @@ function updateKPIs(data) {
     document.getElementById('kpi-avg').textContent = avgScore;
 
     // Não conformidades - CORREÇÃO: contar sempre que houver qualquer valor preenchido
-    const nonComplianceCount = data.filter(row => {
-        // Verificar várias possíveis colunas de não conformidade
-        const ncField1 = row['marque_se_houve_alguma_nao_conformidade_gravedesconto_de_100_pontos'];
-        const ncField2 = row['nao_conformidade'];
-        const ncField3 = row['nao_conformidades'];
-        
-        // Verificar se algum dos campos tem valor preenchido
-        return (ncField1 && ncField1.toString().trim() !== '') ||
-               (ncField2 && ncField2.toString().trim() !== '') ||
-               (ncField3 && ncField3.toString().trim() !== '');
-    }).length;
+    let nonComplianceCount = 0;
+    
+    if (NON_CONFORMITY_FIELD) {
+        nonComplianceCount = data.filter(row => {
+            const ncValue = row[NON_CONFORMITY_FIELD];
+            // Contar como não conformidade se houver qualquer valor preenchido
+            return ncValue !== undefined && ncValue !== null && ncValue !== '' && ncValue.toString().trim() !== '';
+        }).length;
+    } else {
+        // Fallback: procurar em todos os campos por valores de não conformidade
+        nonComplianceCount = data.filter(row => {
+            return Object.keys(row).some(key => {
+                const value = row[key];
+                if (typeof value === 'string' && value.toLowerCase().includes('não conformidade')) {
+                    return true;
+                }
+                return false;
+            });
+        }).length;
+    }
     
     document.getElementById('kpi-non-compliance').textContent = nonComplianceCount;
 
@@ -595,7 +639,7 @@ function updatePerformanceByStageChart(data) {
     const averages = stageTotals.map(s => s.count > 0 ? Math.round(s.sum / s.count) : 0);
 
     const chartData = {
-        labels: STAGE_LABELS, // REMOVIDO: .map(label => formatStageLabel(label))
+        labels: STAGE_LABELS,
         datasets: [{
             label: 'Média de Desempenho (0-100)',
             data: averages,
@@ -652,7 +696,7 @@ function updatePerformanceRadarChart(data) {
     const averages = stageTotals.map(s => s.count > 0 ? Math.round(s.sum / s.count) : 0);
 
     const chartData = {
-        labels: STAGE_LABELS, // REMOVIDO: .map(label => formatStageLabel(label))
+        labels: STAGE_LABELS,
         datasets: [{
             label: 'Média de Performance (0-100)',
             data: averages,
