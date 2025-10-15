@@ -106,14 +106,26 @@
         }
         .kpi-item {
             text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 120px;
         }
         .kpi-value {
             font-size: 2.5rem;
             font-weight: 700;
+            line-height: 1;
+            margin-bottom: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex-grow: 1;
         }
         .kpi-label {
             font-size: 1rem;
             color: #6c757d;
+            margin-top: auto;
         }
         .chart-container {
             position: relative;
@@ -151,7 +163,14 @@
         }
         .stars {
             color: #FFD700;
-            font-size: 1.5rem;
+            font-size: 1.8rem;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+        .stars-rating {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-color);
         }
         .timeline-full-width {
             grid-column: 1 / -1;
@@ -188,6 +207,9 @@
                 max-width: 100%;
             }
             header h1 {
+                font-size: 2rem;
+            }
+            .kpi-value {
                 font-size: 2rem;
             }
         }
@@ -247,7 +269,10 @@
                         <div class="kpi-label">Feedback Recebido</div>
                     </div>
                     <div class="kpi-item">
-                        <div id="kpi-leadership" class="kpi-value">-</div>
+                        <div id="kpi-leadership" class="kpi-value">
+                            <div class="stars">-</div>
+                            <div class="stars-rating">-/-</div>
+                        </div>
                         <div class="kpi-label">Percepção de Liderança</div>
                     </div>
                 </div>
@@ -595,9 +620,13 @@ function updateKPIs(data) {
         Math.round((feedbackReceivedCount / feedbackResponses.length) * 100) + '%' : '0%';
     document.getElementById('kpi-feedback-received').textContent = feedbackPercentage;
 
+    // Percepção de Liderança - CORREÇÃO DO ALINHAMENTO
     const leadershipRating = calculateLeadershipStars(data);
-    document.getElementById('kpi-leadership').innerHTML = 
-        `<span class="stars">${generateStars(leadershipRating)}</span><br>${leadershipRating.toFixed(1)}/5.0`;
+    const starsElement = document.querySelector('#kpi-leadership .stars');
+    const ratingElement = document.querySelector('#kpi-leadership .stars-rating');
+    
+    starsElement.textContent = generateStars(leadershipRating);
+    ratingElement.textContent = `${leadershipRating.toFixed(1)}/5.0`;
 }
 
 function createOrUpdateChart(id, type, data, options) {
