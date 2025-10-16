@@ -178,14 +178,17 @@
         .feedback-full-width {
             grid-column: 1 / -1;
         }
-        .three-in-row {
+        .performance-full-width {
+            grid-column: 1 / -1;
+        }
+        .square-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: repeat(2, 1fr);
             gap: 20px;
             grid-column: 1 / -1;
         }
         @media (max-width: 1200px) {
-            .three-in-row {
+            .square-grid {
                 grid-template-columns: 1fr 1fr;
             }
         }
@@ -199,7 +202,10 @@
             .feedback-full-width {
                 grid-column: span 1;
             }
-            .three-in-row {
+            .performance-full-width {
+                grid-column: span 1;
+            }
+            .square-grid {
                 grid-template-columns: 1fr;
                 grid-column: span 1;
             }
@@ -279,29 +285,31 @@
             </div>
 
             <div class="dashboard-grid">
-                <div class="card grid-col-span-2">
+                <!-- Parte superior: Média de Desempenho esticada -->
+                <div class="card performance-full-width">
                     <h2>📊 Média de Desempenho por Etapa</h2>
                     <div class="chart-container">
                         <canvas id="performanceByStageChart"></canvas>
                     </div>
                 </div>
-                <div class="card">
-                    <h2>⭐ Distribuição das Avaliações</h2>
-                    <div class="chart-container">
-                        <canvas id="ratingDistributionChart"></canvas>
-                    </div>
-                </div>
                 
-                <div class="three-in-row">
+                <!-- Parte do meio: 4 gráficos quadrados -->
+                <div class="square-grid">
+                    <div class="card">
+                        <h2>⭐ Distribuição das Avaliações</h2>
+                        <div class="chart-container-square">
+                            <canvas id="ratingDistributionChart"></canvas>
+                        </div>
+                    </div>
                     <div class="card">
                         <h2>📡 Perfil de Desempenho (Radar)</h2>
-                        <div class="chart-container">
+                        <div class="chart-container-square">
                             <canvas id="performanceRadarChart"></canvas>
                         </div>
                     </div>
                     <div class="card">
                         <h2>🏢 Avaliações por Coordenação</h2>
-                        <div class="chart-container">
+                        <div class="chart-container-square">
                             <canvas id="evalsByCoordChart"></canvas>
                         </div>
                     </div>
@@ -313,6 +321,7 @@
                     </div>
                 </div>
                 
+                <!-- Parte inferior: Timeline e Feedbacks Escritos esticados -->
                 <div class="card timeline-full-width">
                     <h2>📈 Timeline da Média Geral</h2>
                     <div class="chart-container">
@@ -620,7 +629,7 @@ function updateKPIs(data) {
         Math.round((feedbackReceivedCount / feedbackResponses.length) * 100) + '%' : '0%';
     document.getElementById('kpi-feedback-received').textContent = feedbackPercentage;
 
-    // Percepção de Liderança - CORREÇÃO DO ALINHAMENTO
+    // Percepção de Liderança
     const leadershipRating = calculateLeadershipStars(data);
     const starsElement = document.querySelector('#kpi-leadership .stars');
     const ratingElement = document.querySelector('#kpi-leadership .stars-rating');
