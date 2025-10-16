@@ -897,20 +897,55 @@ function updateFeedbackTable(data) {
 }
 
 function updateTimelineChart(data) {
+    // Agrupar dados por mês
     const monthlyData = {};
+    let hasValidData = false;
     
     data.forEach(row => {
-        const timestamp = row.carimbo_de_datahora || row.timestamp || row.data;
+        // Tentar encontrar timestamp - verificar várias colunas possíveis
+        let timestamp = row.carimbo_de_datahora || row.timestamp || row.data || '';
+        
+        // Se não encontrar timestamp, pular
         if (!timestamp) return;
         
         try {
-            const date = new Date(timestamp);
+            // Tentar diferentes formatos de data
+            let date;
+            
+            // Formato do Google Sheets (ex: "2024-01-15 10:30:00")
+            if (timestamp.includes('-')) {
+                date = new Date(timestamp);
+            } 
+            // Formato brasileiro (ex: "15/01/2024 10:30:00")
+            else if (timestamp.includes('/')) {
+                const parts = timestamp.split(' ');
+                const dateParts = parts[0].split('/');
+                if (dateParts.length === 3) {
+                    const day = parseInt(dateParts[0]);
+                    const month = parseInt(dateParts[1]) - 1; // Mês é 0-indexed
+                    const year = parseInt(dateParts[2]);
+                    date = new Date(year, month, day);
+                }
+            }
+            
+            // Se não conseguiu parsear, tentar o construtor padrão
+            if (!date || isNaN(date.getTime())) {
+                date = new Date(timestamp);
+            }
+            
+            // Se ainda não é uma data válida, pular
+            if (isNaN(date.getTime())) {
+                console.log('Data inválida:', timestamp);
+                return;
+            }
+            
             const monthYear = `${date.getMonth() + 1}/${date.getFullYear()}`;
             
             if (!monthlyData[monthYear]) {
                 monthlyData[monthYear] = { sum: 0, count: 0 };
             }
             
+            // Calcular média geral para esta linha
             let rowSum = 0;
             let rowCount = 0;
             
@@ -927,12 +962,68 @@ function updateTimelineChart(data) {
                 const rowAvg = rowSum / rowCount;
                 monthlyData[monthYear].sum += rowAvg;
                 monthlyData[monthYear].count++;
+                hasValidData = true;
             }
         } catch (e) {
-            console.log('Erro ao processar timestamp:', timestamp);
+            console.log('Erro ao processar timestamp:', timestamp, e);
         }
     });
     
+    // Se não há dados válidos, mostrar mensagem
+    if (!hasValidData) {
+        console.log('❌ Nenhum dado válido encontrado para o gráfico de timeline');
+        const chartData = {
+            labels: ['Sem dados'],
+            datasets: [
+                {
+                    label: 'Média Mensal',
+                    data: [0],
+                    borderColor: 'rgb(0, 0, 0)',
+                    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: false
+                }
+            ]
+        };
+        
+        createOrUpdateChart('timelineChart', 'line', chartData, {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Média Geral (0-100)'
+                    },
+                    grid: {
+                        color: 'rgba(0,0,0,0.1)'
+                    }
+                },
+                x: {
+                    offset: true,
+                    grid: {
+                        color: 'rgba(0,0,0,0.1)'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Mês'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
+            }
+        });
+        return;
+    }
+    
+    // Ordenar meses cronologicamente
     const sortedMonths = Object.keys(monthlyData).sort((a, b) => {
         const [monthA, yearA] = a.split('/').map(Number);
         const [monthB, yearB] = b.split('/').map(Number);
@@ -944,7 +1035,13 @@ function updateTimelineChart(data) {
         return data.count > 0 ? Math.round(data.sum / data.count) : 0;
     });
     
-    const trendData = calculateFullTrendLine(sortedMonths.length, averages);
+    // Calcular linha de tendência apenas se houver dados suficientes
+    let trendData = [];
+    if (averages.length >= 2) {
+        trendData = calculateFullTrendLine(averages);
+    } else {
+        trendData = averages; // Se não há dados suficientes, usar os próprios dados
+    }
     
     const chartData = {
         labels: sortedMonths,
@@ -957,20 +1054,24 @@ function updateTimelineChart(data) {
                 borderWidth: 2,
                 tension: 0.4,
                 fill: false
-            },
-            {
-                label: 'Linha de Tendência',
-                data: trendData,
-                borderColor: 'rgb(255, 99, 132)',
-                backgroundColor: 'rgba(255, 99, 132, 0.1)',
-                borderWidth: 2,
-                borderDash: [5, 5],
-                tension: 0,
-                fill: false,
-                pointRadius: 0
             }
         ]
     };
+    
+    // Adicionar linha de tendência apenas se houver dados suficientes
+    if (averages.length >= 2) {
+        chartData.datasets.push({
+            label: 'Linha de Tendência',
+            data: trendData,
+            borderColor: 'rgb(255, 99, 132)',
+            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            tension: 0,
+            fill: false,
+            pointRadius: 0
+        });
+    }
     
     createOrUpdateChart('timelineChart', 'line', chartData, {
         responsive: true,
@@ -1007,22 +1108,23 @@ function updateTimelineChart(data) {
     });
 }
 
-function calculateFullTrendLine(n, data) {
+function calculateFullTrendLine(data) {
     if (data.length < 2) return data;
     
+    const n = data.length;
     let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
     
-    for (let i = 0; i < data.length; i++) {
+    for (let i = 0; i < n; i++) {
         sumX += i;
         sumY += data[i];
         sumXY += i * data[i];
         sumXX += i * i;
     }
     
-    const slope = (data.length * sumXY - sumX * sumY) / (data.length * sumXX - sumX * sumX);
-    const intercept = (sumY - slope * sumX) / data.length;
+    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
     
-    return Array.from({length: data.length}, (_, i) => intercept + slope * i);
+    return Array.from({length: n}, (_, i) => intercept + slope * i);
 }
 </script>
 
