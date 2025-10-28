@@ -279,7 +279,7 @@
                             <div class="stars">-</div>
                             <div class="stars-rating">-/-</div>
                         </div>
-                        <div class="kpi-label">Percepção de Liderança</div>
+                        <div class="kpi-label">Cultura e Valores</div>
                     </div>
                 </div>
             </div>
@@ -629,7 +629,7 @@ function updateKPIs(data) {
         Math.round((feedbackReceivedCount / feedbackResponses.length) * 100) + '%' : '0%';
     document.getElementById('kpi-feedback-received').textContent = feedbackPercentage;
 
-    // Percepção de Liderança
+    // Cultura e Valores
     const leadershipRating = calculateLeadershipStars(data);
     const starsElement = document.querySelector('#kpi-leadership .stars');
     const ratingElement = document.querySelector('#kpi-leadership .stars-rating');
