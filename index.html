@@ -738,6 +738,8 @@ function updateKPIs(data) {
     document.getElementById('kpi-total').textContent = data.length;
 
     let totalScore = 0, totalRatings = 0;
+    let totalBonus = 0, bonusCount = 0;
+    
     data.forEach(row => {
         STAGE_KEYS.forEach(key => {
             if (CONSTANTS.RATING_MAP[row[key]]) {
@@ -751,11 +753,20 @@ function updateKPIs(data) {
         const culturaValor = row['bonus_cultura_e_valores'] || row['cultura_e_valores'] || '';
         if (culturaValor && !isNaN(culturaValor)) {
             const bonusScore = parseFloat(culturaValor) * 2;
-            totalScore += bonusScore;
-            totalRatings++;
+            totalBonus += bonusScore;
+            bonusCount++;
         }
     });
-    const avgScore = totalRatings > 0 ? Math.round(totalScore / totalRatings) : 0;
+    
+    // Calcular média base das etapas
+    const avgBase = totalRatings > 0 ? totalScore / totalRatings : 0;
+    
+    // Adicionar média do bônus
+    const avgBonus = bonusCount > 0 ? totalBonus / bonusCount : 0;
+    
+    // Média final = média base + média do bônus
+    const avgScore = Math.round(avgBase + avgBonus);
+    
     document.getElementById('kpi-avg').textContent = avgScore
 
     let nonComplianceCount = 0;
