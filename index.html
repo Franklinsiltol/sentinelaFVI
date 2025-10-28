@@ -749,10 +749,23 @@ function updateKPIs(data) {
             }
         });
         
-        // Adicionar bônus de Cultura e Valores (multiplicado por 2)
-        const culturaValor = row['bonus_cultura_e_valores'] || row['cultura_e_valores'] || '';
-        if (culturaValor && !isNaN(culturaValor)) {
-            const bonusScore = parseFloat(culturaValor) * 2;
+        // Procurar campo de bônus - testar vários nomes possíveis
+        let culturaValor = null;
+        
+        // Procurar em todas as chaves do objeto
+        Object.keys(row).forEach(key => {
+            const keyLower = key.toLowerCase();
+            if (keyLower.includes('bonus') || keyLower.includes('cultura') || keyLower.includes('valores')) {
+                const valor = row[key];
+                if (valor && !isNaN(valor) && valor >= 1 && valor <= 5) {
+                    culturaValor = parseFloat(valor);
+                    console.log('🌟 Bônus encontrado! Campo:', key, 'Valor:', valor, 'Multiplicado por 2:', valor * 2);
+                }
+            }
+        });
+        
+        if (culturaValor !== null) {
+            const bonusScore = culturaValor * 2;
             totalBonus += bonusScore;
             bonusCount++;
         }
@@ -763,6 +776,10 @@ function updateKPIs(data) {
     
     // Adicionar média do bônus
     const avgBonus = bonusCount > 0 ? totalBonus / bonusCount : 0;
+    
+    console.log('📊 Média Base:', avgBase.toFixed(2));
+    console.log('🌟 Média Bônus:', avgBonus.toFixed(2));
+    console.log('✅ Total:', (avgBase + avgBonus).toFixed(2));
     
     // Média final = média base + média do bônus
     const avgScore = Math.round(avgBase + avgBonus);
