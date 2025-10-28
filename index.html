@@ -93,6 +93,50 @@
             padding: 40px;
             display: none;
         }
+        
+        /* Estilos para as abas */
+        .tabs-container {
+            display: none;
+            margin-bottom: 20px;
+        }
+        .tabs-wrapper {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0;
+        }
+        .tab-button {
+            padding: 12px 20px;
+            background-color: transparent;
+            color: var(--text-color);
+            border: none;
+            border-bottom: 3px solid transparent;
+            border-radius: 8px 8px 0 0;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: -2px;
+        }
+        .tab-button:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+            opacity: 1;
+        }
+        .tab-button.active {
+            background-color: var(--card-bg-color);
+            border-bottom-color: var(--primary-color);
+            font-weight: 600;
+        }
+        .tab-info {
+            margin-top: 12px;
+            padding: 12px;
+            background-color: rgba(0, 0, 0, 0.03);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        
         .dashboard-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
@@ -233,11 +277,13 @@
                 <label for="sheetId">📄 Google Sheet ID</label>
                 <input type="text" id="sheetId" value="1NsGJ5BDGLyx_FyY9hCrtmCzUmzx0X4Hw36JgYnKfuYk">
             </div>
-            <div class="input-group" style="flex-grow: 1;">
-                <label for="sheetName">📝 Nome da Aba</label>
-                <input type="text" id="sheetName" placeholder="Opcional">
-            </div>
-            <button id="loadDataBtn">Carregar Dados</button>
+            <button id="loadSheetsBtn">Carregar Abas</button>
+        </div>
+
+        <div class="card tabs-container" id="tabsContainer">
+            <h3 style="margin-top: 0;">📑 Abas Disponíveis</h3>
+            <div class="tabs-wrapper" id="tabsWrapper"></div>
+            <div class="tab-info" id="tabInfo"></div>
         </div>
 
         <div id="dashboard-content" style="display: none;">
@@ -285,7 +331,6 @@
             </div>
 
             <div class="dashboard-grid">
-                <!-- Parte superior: Média de Desempenho esticada -->
                 <div class="card performance-full-width">
                     <h2>📊 Média de Desempenho por Etapa</h2>
                     <div class="chart-container">
@@ -293,7 +338,6 @@
                     </div>
                 </div>
                 
-                <!-- Parte do meio: 4 gráficos quadrados -->
                 <div class="square-grid">
                     <div class="card">
                         <h2>⭐ Distribuição das Avaliações</h2>
@@ -321,7 +365,6 @@
                     </div>
                 </div>
                 
-                <!-- Parte inferior: Timeline e Feedbacks Escritos esticados -->
                 <div class="card timeline-full-width">
                     <h2>📈 Timeline da Média Geral</h2>
                     <div class="chart-container">
@@ -346,8 +389,10 @@
 <script>
 const DOM = {
     sheetIdInput: document.getElementById('sheetId'),
-    sheetNameInput: document.getElementById('sheetName'),
-    loadDataBtn: document.getElementById('loadDataBtn'),
+    loadSheetsBtn: document.getElementById('loadSheetsBtn'),
+    tabsContainer: document.getElementById('tabsContainer'),
+    tabsWrapper: document.getElementById('tabsWrapper'),
+    tabInfo: document.getElementById('tabInfo'),
     loader: document.getElementById('loader'),
     dashboardContent: document.getElementById('dashboard-content'),
     coordFilter: document.getElementById('coordFilter'),
@@ -366,8 +411,10 @@ let STAGE_LABELS = [];
 let allData = [];
 let charts = {};
 let NON_CONFORMITY_FIELD = '';
+let availableSheets = [];
+let currentSheetName = '';
 
-DOM.loadDataBtn.addEventListener('click', loadData);
+DOM.loadSheetsBtn.addEventListener('click', loadAvailableSheets);
 [DOM.coordFilter, DOM.poloFilter, DOM.execFilter].forEach(el => {
     el.addEventListener('change', applyFiltersAndRender);
 });
@@ -442,19 +489,170 @@ function generateStars(rating) {
     return '★'.repeat(fullStars) + '½'.repeat(halfStar) + '☆'.repeat(emptyStars);
 }
 
-async function loadData() {
+async function loadAvailableSheets() {
     const sheetId = DOM.sheetIdInput.value.trim();
-    const sheetName = DOM.sheetNameInput.value.trim();
 
     if (!sheetId) {
         alert('Por favor, insira o ID da planilha.');
         return;
     }
 
-    DOM.loadDataBtn.disabled = true;
+    DOM.loadSheetsBtn.disabled = true;
+    DOM.loader.style.display = 'block';
+    DOM.loader.textContent = 'Carregando abas disponíveis... ⏳';
+    DOM.tabsContainer.style.display = 'none';
+    DOM.dashboardContent.style.display = 'none';
+
+    try {
+        // Fazer requisição para obter metadados da planilha
+        const metadataUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`;
+        const response = await fetch(metadataUrl);
+        
+        if (!response.ok) {
+            throw new Error(`Falha na requisição: ${response.statusText}`);
+        }
+        
+        let text = await response.text();
+        const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);?\s*$/);
+        
+        if (!match) {
+            throw new Error('Formato inválido. Verifique se a planilha é pública.');
+        }
+
+        const json = JSON.parse(match[1]);
+        
+        // Tentar obter lista de abas através da API do Google Sheets
+        // Como não temos acesso direto à lista de abas via gviz, vamos tentar carregar a primeira aba
+        // e mostrar opção para o usuário adicionar mais abas manualmente
+        
+        // Por enquanto, vamos criar abas baseadas em tentativas comuns
+        await discoverSheets(sheetId);
+        
+        DOM.loader.style.display = 'none';
+        
+        if (availableSheets.length > 0) {
+            displaySheetTabs();
+            DOM.tabsContainer.style.display = 'block';
+        } else {
+            alert('Nenhuma aba encontrada. Carregando aba padrão...');
+            loadSheetData('');
+        }
+
+    } catch (error) {
+        DOM.loader.textContent = `❌ Erro: ${error.message}`;
+        console.error(error);
+        alert(`Erro ao carregar abas:\n${error.message}`);
+    } finally {
+        DOM.loadSheetsBtn.disabled = false;
+    }
+}
+
+async function discoverSheets(sheetId) {
+    availableSheets = [];
+    
+    // Tentar carregar a primeira aba (sem especificar nome)
+    try {
+        const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`;
+        const response = await fetch(url);
+        
+        if (response.ok) {
+            let text = await response.text();
+            const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);?\s*$/);
+            
+            if (match) {
+                const json = JSON.parse(match[1]);
+                
+                // Tentar extrair nome da aba dos metadados
+                let sheetName = 'Aba Principal';
+                if (json.table && json.table.cols && json.table.cols.length > 0) {
+                    availableSheets.push({
+                        name: sheetName,
+                        gid: '',
+                        rowCount: json.table.rows ? json.table.rows.length : 0
+                    });
+                }
+            }
+        }
+    } catch (e) {
+        console.log('Erro ao tentar descobrir abas:', e);
+    }
+    
+    // Tentar algumas abas comuns
+    const commonSheetNames = ['Sheet1', 'Planilha1', 'Dados', 'Data', 'Form Responses 1', 'Respostas ao formulário 1'];
+    
+    for (const name of commonSheetNames) {
+        try {
+            const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(name)}`;
+            const response = await fetch(url);
+            
+            if (response.ok) {
+                let text = await response.text();
+                const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);?\s*$/);
+                
+                if (match) {
+                    const json = JSON.parse(match[1]);
+                    
+                    if (json.status !== 'error' && json.table && json.table.rows) {
+                        // Verificar se já não existe
+                        if (!availableSheets.find(s => s.name === name)) {
+                            availableSheets.push({
+                                name: name,
+                                gid: '',
+                                rowCount: json.table.rows.length
+                            });
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            // Ignorar erros para abas que não existem
+        }
+    }
+}
+
+function displaySheetTabs() {
+    DOM.tabsWrapper.innerHTML = '';
+    
+    availableSheets.forEach((sheet, index) => {
+        const button = document.createElement('button');
+        button.className = 'tab-button';
+        button.textContent = `${sheet.name} (${sheet.rowCount} linhas)`;
+        button.onclick = () => selectSheet(sheet.name, index);
+        
+        if (index === 0) {
+            button.classList.add('active');
+            currentSheetName = sheet.name;
+        }
+        
+        DOM.tabsWrapper.appendChild(button);
+    });
+    
+    // Carregar a primeira aba automaticamente
+    if (availableSheets.length > 0) {
+        loadSheetData(availableSheets[0].name);
+    }
+}
+
+function selectSheet(sheetName, index) {
+    // Atualizar botões ativos
+    document.querySelectorAll('.tab-button').forEach((btn, i) => {
+        if (i === index) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    
+    currentSheetName = sheetName;
+    loadSheetData(sheetName);
+}
+
+async function loadSheetData(sheetName) {
+    const sheetId = DOM.sheetIdInput.value.trim();
+
     DOM.loader.style.display = 'block';
     DOM.dashboardContent.style.display = 'none';
-    DOM.loader.textContent = 'Carregando dados... ⏳';
+    DOM.loader.textContent = `Carregando dados${sheetName ? ' da aba "' + sheetName + '"' : ''}... ⏳`;
 
     let url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`;
     if (sheetName) {
@@ -518,6 +716,13 @@ async function loadData() {
         console.log('✅ Campo de não conformidade:', NON_CONFORMITY_FIELD);
         console.log('✅ Exemplo:', allData[0]);
 
+        // Atualizar informação da aba
+        DOM.tabInfo.innerHTML = `
+            <strong>Aba atual:</strong> ${sheetName || 'Padrão'} | 
+            <strong>Total de registros:</strong> ${allData.length} | 
+            <strong>Etapas encontradas:</strong> ${STAGE_LABELS.length}
+        `;
+
         populateFilters();
         applyFiltersAndRender();
 
@@ -528,8 +733,6 @@ async function loadData() {
         DOM.loader.textContent = `❌ Erro: ${error.message}`;
         console.error(error);
         alert(`Erro ao carregar dados:\n${error.message}`);
-    } finally {
-        DOM.loadDataBtn.disabled = false;
     }
 }
 
@@ -629,7 +832,6 @@ function updateKPIs(data) {
         Math.round((feedbackReceivedCount / feedbackResponses.length) * 100) + '%' : '0%';
     document.getElementById('kpi-feedback-received').textContent = feedbackPercentage;
 
-    // Cultura e Valores
     const leadershipRating = calculateLeadershipStars(data);
     const starsElement = document.querySelector('#kpi-leadership .stars');
     const ratingElement = document.querySelector('#kpi-leadership .stars-rating');
@@ -897,45 +1099,36 @@ function updateFeedbackTable(data) {
 }
 
 function updateTimelineChart(data) {
-    // Agrupar dados por mês
     const monthlyData = {};
     let hasValidData = false;
     
     data.forEach(row => {
-        // Tentar encontrar timestamp - verificar várias colunas possíveis
         let timestamp = row.carimbo_de_datahora || row.timestamp || row.data || '';
         
-        // Se não encontrar timestamp, pular
         if (!timestamp) return;
         
         try {
-            // Tentar diferentes formatos de data
             let date;
             
-            // Formato do Google Sheets (ex: "2024-01-15 10:30:00")
             if (timestamp.includes('-')) {
                 date = new Date(timestamp);
             } 
-            // Formato brasileiro (ex: "15/01/2024 10:30:00")
             else if (timestamp.includes('/')) {
                 const parts = timestamp.split(' ');
                 const dateParts = parts[0].split('/');
                 if (dateParts.length === 3) {
                     const day = parseInt(dateParts[0]);
-                    const month = parseInt(dateParts[1]) - 1; // Mês é 0-indexed
+                    const month = parseInt(dateParts[1]) - 1;
                     const year = parseInt(dateParts[2]);
                     date = new Date(year, month, day);
                 }
             }
             
-            // Se não conseguiu parsear, tentar o construtor padrão
             if (!date || isNaN(date.getTime())) {
                 date = new Date(timestamp);
             }
             
-            // Se ainda não é uma data válida, pular
             if (isNaN(date.getTime())) {
-                console.log('Data inválida:', timestamp);
                 return;
             }
             
@@ -945,7 +1138,6 @@ function updateTimelineChart(data) {
                 monthlyData[monthYear] = { sum: 0, count: 0 };
             }
             
-            // Calcular média geral para esta linha
             let rowSum = 0;
             let rowCount = 0;
             
@@ -969,9 +1161,7 @@ function updateTimelineChart(data) {
         }
     });
     
-    // Se não há dados válidos, mostrar mensagem
     if (!hasValidData) {
-        console.log('❌ Nenhum dado válido encontrado para o gráfico de timeline');
         const chartData = {
             labels: ['Sem dados'],
             datasets: [
@@ -997,33 +1187,20 @@ function updateTimelineChart(data) {
                     title: {
                         display: true,
                         text: 'Média Geral (0-100)'
-                    },
-                    grid: {
-                        color: 'rgba(0,0,0,0.1)'
                     }
                 },
                 x: {
                     offset: true,
-                    grid: {
-                        color: 'rgba(0,0,0,0.1)'
-                    },
                     title: {
                         display: true,
                         text: 'Mês'
                     }
-                }
-            },
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'top'
                 }
             }
         });
         return;
     }
     
-    // Ordenar meses cronologicamente
     const sortedMonths = Object.keys(monthlyData).sort((a, b) => {
         const [monthA, yearA] = a.split('/').map(Number);
         const [monthB, yearB] = b.split('/').map(Number);
@@ -1035,12 +1212,11 @@ function updateTimelineChart(data) {
         return data.count > 0 ? Math.round(data.sum / data.count) : 0;
     });
     
-    // Calcular linha de tendência apenas se houver dados suficientes
     let trendData = [];
     if (averages.length >= 2) {
         trendData = calculateFullTrendLine(averages);
     } else {
-        trendData = averages; // Se não há dados suficientes, usar os próprios dados
+        trendData = averages;
     }
     
     const chartData = {
@@ -1058,7 +1234,6 @@ function updateTimelineChart(data) {
         ]
     };
     
-    // Adicionar linha de tendência apenas se houver dados suficientes
     if (averages.length >= 2) {
         chartData.datasets.push({
             label: 'Linha de Tendência',
@@ -1083,26 +1258,14 @@ function updateTimelineChart(data) {
                 title: {
                     display: true,
                     text: 'Média Geral (0-100)'
-                },
-                grid: {
-                    color: 'rgba(0,0,0,0.1)'
                 }
             },
             x: {
                 offset: true,
-                grid: {
-                    color: 'rgba(0,0,0,0.1)'
-                },
                 title: {
                     display: true,
                     text: 'Mês'
                 }
-            }
-        },
-        plugins: {
-            legend: {
-                display: true,
-                position: 'top'
             }
         }
     });
