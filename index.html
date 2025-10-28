@@ -746,9 +746,17 @@ function updateKPIs(data) {
                 totalRatings++;
             }
         });
+        
+        // Adicionar bônus de Cultura e Valores (multiplicado por 2)
+        const culturaValor = row['bonus_cultura_e_valores'] || row['cultura_e_valores'] || '';
+        if (culturaValor && !isNaN(culturaValor)) {
+            const bonusScore = parseFloat(culturaValor) * 2;
+            totalScore += bonusScore;
+            totalRatings++;
+        }
     });
     const avgScore = totalRatings > 0 ? Math.round(totalScore / totalRatings) : 0;
-    document.getElementById('kpi-avg').textContent = avgScore;
+    document.getElementById('kpi-avg').textContent = avgScore
 
     let nonComplianceCount = 0;
     
