@@ -406,13 +406,14 @@ const CONSTANTS = {
     FILTER_ALL: 'all'
 };
 
+// Configure aqui as abas da sua planilha
+const SHEET_TABS = ['FVI', 'Frarmer'];
+
 let STAGE_KEYS = [];
 let STAGE_LABELS = [];
 let allData = [];
 let charts = {};
 let NON_CONFORMITY_FIELD = '';
-// Configure aqui as abas da sua planilha
-const SHEET_TABS = ['FVI', 'Frarmer'];
 let availableSheets = [];
 let currentSheetName = '';
 
@@ -532,7 +533,7 @@ async function discoverSheets(sheetId, sheetNames) {
     
     for (const name of sheetNames) {
         try {
-            const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(name)}`;
+            const url = 'https://docs.google.com/spreadsheets/d/' + sheetId + '/gviz/tq?tqx=out:json&sheet=' + encodeURIComponent(name);
             const response = await fetch(url);
             
             if (response.ok) {
@@ -548,89 +549,21 @@ async function discoverSheets(sheetId, sheetNames) {
                             gid: '',
                             rowCount: json.table.rows.length
                         });
-                        console.log(`✅ Aba encontrada: ${name} (${json.table.rows.length} linhas)`);
+                        console.log('✅ Aba encontrada: ' + name + ' (' + json.table.rows.length + ' linhas)');
                     } else {
-                        console.log(`⚠️ Aba "${name}" existe mas não tem dados ou retornou erro.`);
+                        console.log('⚠️ Aba "' + name + '" existe mas não tem dados ou retornou erro.');
                     }
                 }
             } else {
-                console.log(`❌ Aba "${name}" não encontrada.`);
+                console.log('❌ Aba "' + name + '" não encontrada.');
             }
         } catch (e) {
-            console.log(`❌ Erro ao carregar aba "${name}":`, e);
+            console.log('❌ Erro ao carregar aba "' + name + '":', e);
         }
     }
     
     if (availableSheets.length === 0) {
         throw new Error('Nenhuma das abas foi encontrada. Verifique se a planilha é pública e se os nomes das abas estão corretos.');
-    }
-}
-            } else {
-                console.log(`❌ Aba "${name}" não encontrada.`);
-            }
-        } catch (e) {
-            console.log(`❌ Erro ao carregar aba "${name}":`, e);
-        }
-    }
-    
-    if (availableSheets.length === 0) {
-        throw new Error('Nenhuma das abas fornecidas foi encontrada. Verifique os nomes e tente novamente.');
-    }
-}/gviz/tq?tqx=out:json`;
-        const response = await fetch(url);
-        
-        if (response.ok) {
-            let text = await response.text();
-            const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);?\s*$/);
-            
-            if (match) {
-                const json = JSON.parse(match[1]);
-                
-                // Tentar extrair nome da aba dos metadados
-                let sheetName = 'Aba Principal';
-                if (json.table && json.table.cols && json.table.cols.length > 0) {
-                    availableSheets.push({
-                        name: sheetName,
-                        gid: '',
-                        rowCount: json.table.rows ? json.table.rows.length : 0
-                    });
-                }
-            }
-        }
-    } catch (e) {
-        console.log('Erro ao tentar descobrir abas:', e);
-    }
-    
-    // Tentar algumas abas comuns
-    const commonSheetNames = ['Sheet1', 'Planilha1', 'Dados', 'Data', 'Form Responses 1', 'Respostas ao formulário 1'];
-    
-    for (const name of commonSheetNames) {
-        try {
-            const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(name)}`;
-            const response = await fetch(url);
-            
-            if (response.ok) {
-                let text = await response.text();
-                const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);?\s*$/);
-                
-                if (match) {
-                    const json = JSON.parse(match[1]);
-                    
-                    if (json.status !== 'error' && json.table && json.table.rows) {
-                        // Verificar se já não existe
-                        if (!availableSheets.find(s => s.name === name)) {
-                            availableSheets.push({
-                                name: name,
-                                gid: '',
-                                rowCount: json.table.rows.length
-                            });
-                        }
-                    }
-                }
-            }
-        } catch (e) {
-            // Ignorar erros para abas que não existem
-        }
     }
 }
 
@@ -640,7 +573,7 @@ function displaySheetTabs() {
     availableSheets.forEach((sheet, index) => {
         const button = document.createElement('button');
         button.className = 'tab-button';
-        button.textContent = `${sheet.name} (${sheet.rowCount} linhas)`;
+        button.textContent = sheet.name + ' (' + sheet.rowCount + ' linhas)';
         button.onclick = () => selectSheet(sheet.name, index);
         
         if (index === 0) {
@@ -651,14 +584,12 @@ function displaySheetTabs() {
         DOM.tabsWrapper.appendChild(button);
     });
     
-    // Carregar a primeira aba automaticamente
     if (availableSheets.length > 0) {
         loadSheetData(availableSheets[0].name);
     }
 }
 
 function selectSheet(sheetName, index) {
-    // Atualizar botões ativos
     document.querySelectorAll('.tab-button').forEach((btn, i) => {
         if (i === index) {
             btn.classList.add('active');
@@ -676,17 +607,17 @@ async function loadSheetData(sheetName) {
 
     DOM.loader.style.display = 'block';
     DOM.dashboardContent.style.display = 'none';
-    DOM.loader.textContent = `Carregando dados${sheetName ? ' da aba "' + sheetName + '"' : ''}... ⏳`;
+    DOM.loader.textContent = 'Carregando dados' + (sheetName ? ' da aba "' + sheetName + '"' : '') + '... ⏳';
 
-    let url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`;
+    let url = 'https://docs.google.com/spreadsheets/d/' + sheetId + '/gviz/tq?tqx=out:json';
     if (sheetName) {
-        url += `&sheet=${encodeURIComponent(sheetName)}`;
+        url += '&sheet=' + encodeURIComponent(sheetName);
     }
 
     try {
         const response = await fetch(url);
         if (!response.ok) {
-            throw new Error(`Falha na requisição: ${response.statusText}`);
+            throw new Error('Falha na requisição: ' + response.statusText);
         }
         let text = await response.text();
         
@@ -698,7 +629,7 @@ async function loadSheetData(sheetName) {
         const json = JSON.parse(match[1]);
 
         if (json.status === 'error') {
-            throw new Error(`Erro: ${json.errors.map(e => e.detailed_message).join(', ')}`);
+            throw new Error('Erro: ' + json.errors.map(e => e.detailed_message).join(', '));
         }
 
         const table = json.table;
@@ -740,12 +671,7 @@ async function loadSheetData(sheetName) {
         console.log('✅ Campo de não conformidade:', NON_CONFORMITY_FIELD);
         console.log('✅ Exemplo:', allData[0]);
 
-        // Atualizar informação da aba
-        DOM.tabInfo.innerHTML = `
-            <strong>Aba atual:</strong> ${sheetName || 'Padrão'} | 
-            <strong>Total de registros:</strong> ${allData.length} | 
-            <strong>Etapas encontradas:</strong> ${STAGE_LABELS.length}
-        `;
+        DOM.tabInfo.innerHTML = '<strong>Aba atual:</strong> ' + (sheetName || 'Padrão') + ' | <strong>Total de registros:</strong> ' + allData.length + ' | <strong>Etapas encontradas:</strong> ' + STAGE_LABELS.length;
 
         populateFilters();
         applyFiltersAndRender();
@@ -754,9 +680,9 @@ async function loadSheetData(sheetName) {
         DOM.dashboardContent.style.display = 'block';
 
     } catch (error) {
-        DOM.loader.textContent = `❌ Erro: ${error.message}`;
+        DOM.loader.textContent = '❌ Erro: ' + error.message;
         console.error(error);
-        alert(`Erro ao carregar dados:\n${error.message}`);
+        alert('Erro ao carregar dados:\n' + error.message);
     }
 }
 
@@ -770,9 +696,9 @@ function populateFilters() {
     });
 
     const populate = (selectElement, values) => {
-        selectElement.innerHTML = `<option value="${CONSTANTS.FILTER_ALL}">Todos</option>`;
+        selectElement.innerHTML = '<option value="' + CONSTANTS.FILTER_ALL + '">Todos</option>';
         [...values].sort().forEach(value => {
-            selectElement.innerHTML += `<option value="${value}">${value}</option>`;
+            selectElement.innerHTML += '<option value="' + value + '">' + value + '</option>';
         });
     };
 
@@ -861,7 +787,7 @@ function updateKPIs(data) {
     const ratingElement = document.querySelector('#kpi-leadership .stars-rating');
     
     starsElement.textContent = generateStars(leadershipRating);
-    ratingElement.textContent = `${leadershipRating.toFixed(1)}/5.0`;
+    ratingElement.textContent = leadershipRating.toFixed(1) + '/5.0';
 }
 
 function createOrUpdateChart(id, type, data, options) {
@@ -1093,7 +1019,7 @@ function updateFeedbackGivenChart(data) {
                     label: function(context) {
                         const total = counts['Sim'] + counts['Não'];
                         const percentage = Math.round((context.parsed / total) * 100);
-                        return `${context.label}: ${context.parsed} (${percentage}%)`;
+                        return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
                     }
                 }
             }
@@ -1110,11 +1036,7 @@ function updateFeedbackTable(data) {
         if (feedback) {
             const tr = document.createElement('tr');
             const timestamp = row.carimbo_de_datahora || row.timestamp || 'N/A';
-            tr.innerHTML = `
-                <td>${row.email_do_executivo || 'N/A'}</td>
-                <td>${timestamp}</td>
-                <td>${feedback}</td>
-            `;
+            tr.innerHTML = '<td>' + (row.email_do_executivo || 'N/A') + '</td><td>' + timestamp + '</td><td>' + feedback + '</td>';
             fragment.appendChild(tr);
         }
     });
@@ -1156,7 +1078,7 @@ function updateTimelineChart(data) {
                 return;
             }
             
-            const monthYear = `${date.getMonth() + 1}/${date.getFullYear()}`;
+            const monthYear = (date.getMonth() + 1) + '/' + date.getFullYear();
             
             if (!monthlyData[monthYear]) {
                 monthlyData[monthYear] = { sum: 0, count: 0 };
@@ -1226,8 +1148,10 @@ function updateTimelineChart(data) {
     }
     
     const sortedMonths = Object.keys(monthlyData).sort((a, b) => {
-        const [monthA, yearA] = a.split('/').map(Number);
-        const [monthB, yearB] = b.split('/').map(Number);
+        const monthA = parseInt(a.split('/')[0]);
+        const yearA = parseInt(a.split('/')[1]);
+        const monthB = parseInt(b.split('/')[0]);
+        const yearB = parseInt(b.split('/')[1]);
         return new Date(yearA, monthA - 1) - new Date(yearB, monthB - 1);
     });
     
