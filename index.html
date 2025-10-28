@@ -277,11 +277,7 @@
                 <label for="sheetId">📄 Google Sheet ID</label>
                 <input type="text" id="sheetId" value="1NsGJ5BDGLyx_FyY9hCrtmCzUmzx0X4Hw36JgYnKfuYk">
             </div>
-            <div class="input-group" style="flex-grow: 1;">
-                <label for="sheetNamesInput">📝 Nomes das Abas (separados por vírgula)</label>
-                <input type="text" id="sheetNamesInput" placeholder="Ex: FVI, Frarmer">
-            </div>
-            <button id="loadSheetsBtn">Carregar Abas</button>
+            <button id="loadSheetsBtn">Carregar Dados</button>
         </div>
 
         <div class="card tabs-container" id="tabsContainer">
@@ -393,7 +389,6 @@
 <script>
 const DOM = {
     sheetIdInput: document.getElementById('sheetId'),
-    sheetNamesInput: document.getElementById('sheetNamesInput'),
     loadSheetsBtn: document.getElementById('loadSheetsBtn'),
     tabsContainer: document.getElementById('tabsContainer'),
     tabsWrapper: document.getElementById('tabsWrapper'),
@@ -416,6 +411,8 @@ let STAGE_LABELS = [];
 let allData = [];
 let charts = {};
 let NON_CONFORMITY_FIELD = '';
+// Configure aqui as abas da sua planilha
+const SHEET_TABS = ['FVI', 'Frarmer'];
 let availableSheets = [];
 let currentSheetName = '';
 
@@ -496,15 +493,9 @@ function generateStars(rating) {
 
 async function loadAvailableSheets() {
     const sheetId = DOM.sheetIdInput.value.trim();
-    const sheetNamesInput = DOM.sheetNamesInput.value.trim();
 
     if (!sheetId) {
         alert('Por favor, insira o ID da planilha.');
-        return;
-    }
-
-    if (!sheetNamesInput) {
-        alert('Por favor, insira os nomes das abas separados por vírgula.\nExemplo: FVI, Frarmer');
         return;
     }
 
@@ -515,13 +506,7 @@ async function loadAvailableSheets() {
     DOM.dashboardContent.style.display = 'none';
 
     try {
-        const sheetNames = sheetNamesInput.split(',').map(name => name.trim()).filter(name => name);
-        
-        if (sheetNames.length === 0) {
-            throw new Error('Nenhum nome de aba válido fornecido.');
-        }
-
-        await discoverSheets(sheetId, sheetNames);
+        await discoverSheets(sheetId, SHEET_TABS);
         
         DOM.loader.style.display = 'none';
         
@@ -529,7 +514,7 @@ async function loadAvailableSheets() {
             displaySheetTabs();
             DOM.tabsContainer.style.display = 'block';
         } else {
-            alert('Nenhuma aba encontrada com os nomes fornecidos.');
+            alert('Nenhuma aba encontrada. Verifique se a planilha é pública.');
         }
 
     } catch (error) {
@@ -568,6 +553,18 @@ async function discoverSheets(sheetId, sheetNames) {
                         console.log(`⚠️ Aba "${name}" existe mas não tem dados ou retornou erro.`);
                     }
                 }
+            } else {
+                console.log(`❌ Aba "${name}" não encontrada.`);
+            }
+        } catch (e) {
+            console.log(`❌ Erro ao carregar aba "${name}":`, e);
+        }
+    }
+    
+    if (availableSheets.length === 0) {
+        throw new Error('Nenhuma das abas foi encontrada. Verifique se a planilha é pública e se os nomes das abas estão corretos.');
+    }
+}
             } else {
                 console.log(`❌ Aba "${name}" não encontrada.`);
             }
