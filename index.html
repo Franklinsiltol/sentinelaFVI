@@ -277,6 +277,10 @@
                 <label for="sheetId">📄 Google Sheet ID</label>
                 <input type="text" id="sheetId" value="1NsGJ5BDGLyx_FyY9hCrtmCzUmzx0X4Hw36JgYnKfuYk">
             </div>
+            <div class="input-group" style="flex-grow: 1;">
+                <label for="sheetNamesInput">📝 Nomes das Abas (separados por vírgula)</label>
+                <input type="text" id="sheetNamesInput" placeholder="Ex: FVI, Frarmer">
+            </div>
             <button id="loadSheetsBtn">Carregar Abas</button>
         </div>
 
@@ -389,6 +393,7 @@
 <script>
 const DOM = {
     sheetIdInput: document.getElementById('sheetId'),
+    sheetNamesInput: document.getElementById('sheetNamesInput'),
     loadSheetsBtn: document.getElementById('loadSheetsBtn'),
     tabsContainer: document.getElementById('tabsContainer'),
     tabsWrapper: document.getElementById('tabsWrapper'),
@@ -491,9 +496,15 @@ function generateStars(rating) {
 
 async function loadAvailableSheets() {
     const sheetId = DOM.sheetIdInput.value.trim();
+    const sheetNamesInput = DOM.sheetNamesInput.value.trim();
 
     if (!sheetId) {
         alert('Por favor, insira o ID da planilha.');
+        return;
+    }
+
+    if (!sheetNamesInput) {
+        alert('Por favor, insira os nomes das abas separados por vírgula.\nExemplo: FVI, Frarmer');
         return;
     }
 
@@ -504,29 +515,13 @@ async function loadAvailableSheets() {
     DOM.dashboardContent.style.display = 'none';
 
     try {
-        // Fazer requisição para obter metadados da planilha
-        const metadataUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`;
-        const response = await fetch(metadataUrl);
+        const sheetNames = sheetNamesInput.split(',').map(name => name.trim()).filter(name => name);
         
-        if (!response.ok) {
-            throw new Error(`Falha na requisição: ${response.statusText}`);
-        }
-        
-        let text = await response.text();
-        const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);?\s*$/);
-        
-        if (!match) {
-            throw new Error('Formato inválido. Verifique se a planilha é pública.');
+        if (sheetNames.length === 0) {
+            throw new Error('Nenhum nome de aba válido fornecido.');
         }
 
-        const json = JSON.parse(match[1]);
-        
-        // Tentar obter lista de abas através da API do Google Sheets
-        // Como não temos acesso direto à lista de abas via gviz, vamos tentar carregar a primeira aba
-        // e mostrar opção para o usuário adicionar mais abas manualmente
-        
-        // Por enquanto, vamos criar abas baseadas em tentativas comuns
-        await discoverSheets(sheetId);
+        await discoverSheets(sheetId, sheetNames);
         
         DOM.loader.style.display = 'none';
         
@@ -534,25 +529,57 @@ async function loadAvailableSheets() {
             displaySheetTabs();
             DOM.tabsContainer.style.display = 'block';
         } else {
-            alert('Nenhuma aba encontrada. Carregando aba padrão...');
-            loadSheetData('');
+            alert('Nenhuma aba encontrada com os nomes fornecidos.');
         }
 
     } catch (error) {
         DOM.loader.textContent = `❌ Erro: ${error.message}`;
         console.error(error);
         alert(`Erro ao carregar abas:\n${error.message}`);
+        DOM.loader.style.display = 'none';
     } finally {
         DOM.loadSheetsBtn.disabled = false;
     }
 }
 
-async function discoverSheets(sheetId) {
+async function discoverSheets(sheetId, sheetNames) {
     availableSheets = [];
     
-    // Tentar carregar a primeira aba (sem especificar nome)
-    try {
-        const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`;
+    for (const name of sheetNames) {
+        try {
+            const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(name)}`;
+            const response = await fetch(url);
+            
+            if (response.ok) {
+                let text = await response.text();
+                const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);?\s*$/);
+                
+                if (match) {
+                    const json = JSON.parse(match[1]);
+                    
+                    if (json.status !== 'error' && json.table && json.table.rows) {
+                        availableSheets.push({
+                            name: name,
+                            gid: '',
+                            rowCount: json.table.rows.length
+                        });
+                        console.log(`✅ Aba encontrada: ${name} (${json.table.rows.length} linhas)`);
+                    } else {
+                        console.log(`⚠️ Aba "${name}" existe mas não tem dados ou retornou erro.`);
+                    }
+                }
+            } else {
+                console.log(`❌ Aba "${name}" não encontrada.`);
+            }
+        } catch (e) {
+            console.log(`❌ Erro ao carregar aba "${name}":`, e);
+        }
+    }
+    
+    if (availableSheets.length === 0) {
+        throw new Error('Nenhuma das abas fornecidas foi encontrada. Verifique os nomes e tente novamente.');
+    }
+}/gviz/tq?tqx=out:json`;
         const response = await fetch(url);
         
         if (response.ok) {
