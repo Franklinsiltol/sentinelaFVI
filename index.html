@@ -1798,34 +1798,54 @@ function copyShareUrl() {
 }
 
 function loadFiltersFromUrl() {
-            const params = new URLSearchParams(window.location.search);
-            
-            const sheetId = params.get('sheet');
-            if (sheetId) {
-                DOM.sheetIdInput.value = sheetId;
-                
-                // Carregar dados automaticamente
+    const params = new URLSearchParams(window.location.search);
+    const sheetId = params.get('sheet');
+    
+    if (sheetId) {
+        DOM.sheetIdInput.value = sheetId;
+        
+        // Carregar dados automaticamente
+        setTimeout(() => {
+            loadAvailableSheets().then(() => {
+                // Aguardar um pouco para garantir que os dados foram carregados
                 setTimeout(() => {
-                    loadAvailableSheets().then(() => {
-                        const tab = params.get('tab');
-                        const coord = params.get('coord');
-                        const polo = params.get('polo');
-                        const exec = params.get('exec');
-                        const dateFrom = params.get('dateFrom');
-                        const dateTo = params.get('dateTo');
-
-                        if (coord) DOM.coordFilter.value = coord;
-                        if (polo) DOM.poloFilter.value = polo;
-                        if (exec) DOM.execFilter.value = exec;
-                        if (dateFrom) DOM.dateFromFilter.value = dateFrom;
-                        if (dateTo) DOM.dateToFilter.value = dateTo;
-
+                    const tab = params.get('tab');
+                    const coord = params.get('coord');
+                    const polo = params.get('polo');
+                    const exec = params.get('exec');
+                    const dateFrom = params.get('dateFrom');
+                    const dateTo = params.get('dateTo');
+                    
+                    // Aplicar filtros se existirem
+                    if (coord && coord !== CONSTANTS.FILTER_ALL) {
+                        DOM.coordFilter.value = coord;
+                    }
+                    if (polo && polo !== CONSTANTS.FILTER_ALL) {
+                        DOM.poloFilter.value = polo;
+                    }
+                    if (exec && exec !== CONSTANTS.FILTER_ALL) {
+                        DOM.execFilter.value = exec;
+                    }
+                    if (dateFrom) {
+                        DOM.dateFromFilter.value = dateFrom;
+                    }
+                    if (dateTo) {
+                        DOM.dateToFilter.value = dateTo;
+                    }
+                    
+                    // Aplicar filtros e renderizar
+                    if (coord || polo || exec || dateFrom || dateTo) {
                         applyFiltersAndRender();
+                    }
+                    
                     updateShareUrl();
-                        });
-                }, 100);
-            }
-        }
+                }, 500);
+            }).catch(error => {
+                console.error('Erro ao carregar planilha da URL:', error);
+            });
+        }, 100);
+    }
+}
     </script>
 </body>
 </html>
