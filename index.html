@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard de Performance</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -30,17 +30,6 @@
         .container {
             max-width: 1600px;
             margin: 0 auto;
-        }
-
-        header {
-            text-align: center;
-            margin-bottom: 24px;
-        }
-
-        header h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin: 0;
         }
 
         .card {
@@ -332,27 +321,9 @@
             margin-bottom: 12px;
         }
 
-        .url-share {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            margin-top: 12px;
-            padding: 12px;
-            background-color: rgba(0, 0, 0, 0.03);
-            border-radius: 8px;
-        }
-
-        .url-share input {
-            flex-grow: 1;
-        }
-
         @media (max-width: 768px) {
             .grid-col-span-2 {
                 grid-column: span 1;
-            }
-
-            header h1 {
-                font-size: 2rem;
             }
 
             .kpi-value {
@@ -363,21 +334,16 @@
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>📊 Dashboard de Performance</h1>
-        </header>
-
         <div class="card">
             <div class="config-section">
                 <div class="input-group">
-                    <label for="sheetId">📄 Google Sheet ID</label>
-                    <input type="text" id="sheetId" placeholder="Cole o ID da planilha aqui">
+                    <input type="text" id="sheetId" value="1U8xayLKk8ampH3w0l6D-vx0uTLLeXIPw_UsXC2dlUTU" placeholder="Cole o ID da planilha aqui">
                 </div>
-                <button id="loadSheetsBtn">Carregar Dados</button>
+                <button id="loadBtn">🚀 Carregar Dados</button>
             </div>
         </div>
 
-        <div id="loader">Carregando... ⏳</div>
+        <div id="loader">Carregando dados... ⏳</div>
 
         <div id="tabsContainer" class="tabs-container card">
             <h3>📑 Abas Disponíveis</h3>
@@ -432,7 +398,7 @@
                     </div>
                     <div class="kpi-item">
                         <div class="kpi-value" id="kpi-routes">-</div>
-                        <div class="kpi-label">Quantidade de Rotas</div>
+                        <div class="kpi-label">Soma Total de Rotas</div>
                     </div>
                     <div class="kpi-item">
                         <div class="kpi-value" id="kpi-non-compliance">-</div>
@@ -557,8 +523,8 @@
 
     <script>
         const DOM = {
-            sheetIdInput: document.getElementById('sheetId'),
-            loadSheetsBtn: document.getElementById('loadSheetsBtn'),
+            sheetId: document.getElementById('sheetId'),
+            loadBtn: document.getElementById('loadBtn'),
             tabsContainer: document.getElementById('tabsContainer'),
             tabsWrapper: document.getElementById('tabsWrapper'),
             tabInfo: document.getElementById('tabInfo'),
@@ -570,8 +536,6 @@
             dateFromFilter: document.getElementById('dateFromFilter'),
             dateToFilter: document.getElementById('dateToFilter'),
             clearFiltersBtn: document.getElementById('clearFiltersBtn'),
-            shareUrl: document.getElementById('shareUrl'),
-            copyUrlBtn: document.getElementById('copyUrlBtn'),
             feedbackTableBody: document.querySelector('#feedbackTable tbody'),
             historyTableHeader: document.getElementById('historyTableHeader'),
             historyTableBody: document.getElementById('historyTableBody'),
@@ -600,13 +564,13 @@
         let allData = [];
         let charts = {};
         let NON_CONFORMITY_FIELD = '';
-        let ROUTE_FIELD = ''; // NOVO: Campo para armazenar a coluna de rotas
+        let ROUTE_FIELD = '';
         let availableSheets = [];
         let currentSheetName = '';
         let sortState = { column: null, direction: 'asc' };
 
         // Event Listeners
-        DOM.loadSheetsBtn.addEventListener('click', loadAvailableSheets);
+        DOM.loadBtn.addEventListener('click', loadAvailableSheets);
         DOM.clearFiltersBtn.addEventListener('click', clearFilters);
         DOM.exportCsvBtn.addEventListener('click', exportToCSV);
         DOM.exportExcelBtn.addEventListener('click', exportToExcel);
@@ -616,9 +580,6 @@
                 applyFiltersAndRender();
             });
         });
-
-        // Carregar filtros da URL ao iniciar
-        window.addEventListener('load', loadFiltersFromUrl);
 
         function normalizeHeader(header) {
             if (typeof header !== 'string') return '';
@@ -650,20 +611,16 @@
             return null;
         }
 
-        // NOVO: Função para encontrar o campo de rotas
         function findRouteField(headers, raw_headers) {
-            // Procurar pela coluna "o" ou variações
             for (let i = 0; i < headers.length; i++) {
                 const header = headers[i];
                 const rawHeader = raw_headers[i].toLowerCase();
                 
-                // Verificar se é exatamente a coluna "o"
                 if (header === 'o') {
                     console.log('✅ Campo de rotas encontrado (coluna "o"):', header, '->', raw_headers[i]);
                     return header;
                 }
                 
-                // Verificar variações
                 if (rawHeader.includes('rota') || rawHeader.includes('route') || 
                     rawHeader.includes('numero') && rawHeader.includes('rota')) {
                     console.log('✅ Campo de rotas encontrado:', header, '->', raw_headers[i]);
@@ -706,13 +663,13 @@
         }
 
         async function loadAvailableSheets() {
-            const sheetId = DOM.sheetIdInput.value.trim();
+            const sheetId = DOM.sheetId.value.trim();
             if (!sheetId) {
                 alert('Por favor, insira o ID da planilha.');
                 return;
             }
 
-            DOM.loadSheetsBtn.disabled = true;
+            DOM.loadBtn.disabled = true;
             DOM.loader.style.display = 'block';
             DOM.loader.textContent = 'Carregando abas disponíveis... ⏳';
             DOM.tabsContainer.style.display = 'none';
@@ -726,15 +683,15 @@
                     displaySheetTabs();
                     DOM.tabsContainer.style.display = 'block';
                 } else {
-                    alert('Nenhuma aba encontrada. Verifique se a planilha é pública.');
+                    DOM.loader.textContent = '❌ Nenhuma aba encontrada. Verifique se a planilha é pública.';
+                    DOM.loader.style.display = 'block';
                 }
             } catch (error) {
                 DOM.loader.textContent = `❌ Erro: ${error.message}`;
                 console.error(error);
-                alert(`Erro ao carregar abas: ${error.message}`);
-                DOM.loader.style.display = 'none';
+                DOM.loader.style.display = 'block';
             } finally {
-                DOM.loadSheetsBtn.disabled = false;
+                DOM.loadBtn.disabled = false;
             }
         }
 
@@ -801,7 +758,7 @@
         }
 
         async function loadSheetData(sheetName) {
-            const sheetId = DOM.sheetIdInput.value.trim();
+            const sheetId = DOM.sheetId.value.trim();
             DOM.loader.style.display = 'block';
             DOM.dashboardContent.style.display = 'none';
             DOM.loader.textContent = `Carregando dados${sheetName ? ' da aba "' + sheetName + '"' : ''}... ⏳`;
@@ -854,7 +811,7 @@
                 });
 
                 NON_CONFORMITY_FIELD = findNonConformityField(headers, raw_headers);
-                ROUTE_FIELD = findRouteField(headers, raw_headers); // NOVO: Encontrar campo de rotas
+                ROUTE_FIELD = findRouteField(headers, raw_headers);
 
                 allData = dataRows.map(row => {
                     const entry = {};
@@ -866,7 +823,7 @@
 
                 console.log('✅ Etapas encontradas:', STAGE_LABELS);
                 console.log('✅ Campo de não conformidade:', NON_CONFORMITY_FIELD);
-                console.log('✅ Campo de rotas:', ROUTE_FIELD); // NOVO: Log do campo de rotas
+                console.log('✅ Campo de rotas:', ROUTE_FIELD);
 
                 DOM.tabInfo.innerHTML = `<strong>Aba atual:</strong> ${sheetName || 'Padrão'} | <strong>Total de registros:</strong> ${allData.length} | <strong>Etapas encontradas:</strong> ${STAGE_LABELS.length}`;
 
@@ -878,7 +835,6 @@
             } catch (error) {
                 DOM.loader.textContent = `❌ Erro: ${error.message}`;
                 console.error(error);
-                alert(`Erro ao carregar dados: ${error.message}`);
             }
         }
 
@@ -954,12 +910,10 @@
 
             const filteredData = allData.filter(row => {
                 const all = CONSTANTS.FILTER_ALL;
-                // Filtros básicos
                 if (coord !== all && row.coordenacao !== coord) return false;
                 if (polo !== all && row.polo !== polo) return false;
                 if (exec !== all && row.email_do_executivo !== exec) return false;
 
-                // Filtro de data
                 if (dateFrom || dateTo) {
                     const timestamp = row.carimbo_de_datahora || row.timestamp || row.data || '';
                     const rowDate = parseDate(timestamp);
@@ -994,9 +948,7 @@
 
             let totalScore = 0, totalRatings = 0;
             let totalBonus = 0, bonusCount = 0;
-
-            // NOVO: Contar rotas únicas usando o campo identificado
-            const routesSet = new Set();
+            let totalRoutes = 0;
 
             data.forEach(row => {
                 STAGE_KEYS.forEach(key => {
@@ -1019,11 +971,14 @@
                     }
                 });
 
-                // NOVO: Adicionar rota ao Set usando o campo identificado
+                // SOMA DAS ROTAS
                 if (ROUTE_FIELD && row[ROUTE_FIELD]) {
                     const routeValue = row[ROUTE_FIELD];
                     if (routeValue && routeValue.toString().trim() !== '') {
-                        routesSet.add(routeValue.toString().trim());
+                        const numericValue = parseFloat(routeValue);
+                        if (!isNaN(numericValue) && numericValue > 0) {
+                            totalRoutes += numericValue;
+                        }
                     }
                 }
             });
@@ -1033,11 +988,7 @@
             const avgScore = Math.round(avgBase + avgBonus);
 
             document.getElementById('kpi-avg').textContent = avgScore;
-
-            // NOVO: Atualizar KPI de rotas
-            console.log('🔍 Debug - Rotas encontradas:', routesSet);
-            console.log('🔍 Debug - Total de rotas únicas:', routesSet.size);
-            document.getElementById('kpi-routes').textContent = routesSet.size;
+            document.getElementById('kpi-routes').textContent = totalRoutes;
 
             let nonComplianceCount = 0;
             if (NON_CONFORMITY_FIELD) {
@@ -1071,7 +1022,6 @@
         }
 
         function updateRankings(data) {
-            // Calcular médias por grupo
             const calculateGroupAverage = (groupKey) => {
                 const groups = {};
 
@@ -1159,7 +1109,6 @@
 
             const averages = stageTotals.map(s => s.count > 0 ? Math.round(s.sum / s.count) : 0);
 
-            // Determinar cores baseadas na média
             const backgroundColors = averages.map(avg => {
                 if (avg < 50) return CONSTANTS.COLOR_BELOW;
                 if (avg < 75) return CONSTANTS.COLOR_MEETS;
@@ -1212,7 +1161,7 @@
         function updateAboveBelowAvgChart(data) {
             let aboveAvg = 0;
             let belowAvg = 0;
-            const avgThreshold = 50; // Média = 50 (Meets)
+            const avgThreshold = 50;
 
             data.forEach(row => {
                 STAGE_KEYS.forEach(key => {
@@ -1715,33 +1664,6 @@
 
         function exportToExcel() {
             alert('Exportação para Excel requer biblioteca adicional. Use a exportação CSV por enquanto.');
-        }
-
-        function loadFiltersFromUrl() {
-            const params = new URLSearchParams(window.location.search);
-            const sheetId = params.get('sheet');
-
-            if (sheetId) {
-                DOM.sheetIdInput.value = sheetId;
-                setTimeout(() => {
-                    loadAvailableSheets().then(() => {
-                        const tab = params.get('tab');
-                        const coord = params.get('coord');
-                        const polo = params.get('polo');
-                        const exec = params.get('exec');
-                        const dateFrom = params.get('dateFrom');
-                        const dateTo = params.get('dateTo');
-
-                        if (coord) DOM.coordFilter.value = coord;
-                        if (polo) DOM.poloFilter.value = polo;
-                        if (exec) DOM.execFilter.value = exec;
-                        if (dateFrom) DOM.dateFromFilter.value = dateFrom;
-                        if (dateTo) DOM.dateToFilter.value = dateTo;
-
-                        applyFiltersAndRender();
-                    });
-                }, 100);
-            }
         }
     </script>
 </body>
