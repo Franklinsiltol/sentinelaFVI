@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sentinela 🕵️ - Dashboard de Performance</title>
+    <title>Dashboard de Performance</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
@@ -362,14 +362,13 @@
 <body>
     <div class="container">
         <header>
-            <h1>Sentinela 🕵️</h1>
         </header>
 
         <div class="card">
             <div class="config-section">
                 <div class="input-group">
                     <label for="sheetId">📄 Google Sheet ID</label>
-                    <input type="text" id="sheetId" placeholder="Cole o ID da planilha aqui">
+                    <input type="text" id="sheetId" placeholder="Cole o ID da planilha aqui" value="1U8xayLKk8ampH3w0l6D-vx0uTLLeXIPw_UsXC2dlUTU">
                 </div>
                 <button id="loadSheetsBtn">Carregar Dados</button>
             </div>
@@ -416,15 +415,9 @@
                         <label for="dateToFilter">📅 Data Fim</label>
                         <input type="date" id="dateToFilter">
                     </div>
-                    
-            <button id="clearFiltersBtn" class="secondary">Limpar Filtros</button>
-        </div>
-        
-        <div class="url-share">
-            <input type="text" id="shareUrl" readonly placeholder="URL para compartilhar será gerada aqui">
-            <button id="copyUrlBtn">📋 Copiar Link</button>
-        </div>
-    </div>
+                    <button id="clearFiltersBtn" class="secondary">Limpar Filtros</button>
+                </div>
+                </div>
 
             <div class="card">
                 <h3>📊 KPIs Principais</h3>
@@ -560,30 +553,30 @@
 
     <script>
         const DOM = {
-    sheetIdInput: document.getElementById('sheetId'),
-    loadSheetsBtn: document.getElementById('loadSheetsBtn'),
-    tabsContainer: document.getElementById('tabsContainer'),
-    tabsWrapper: document.getElementById('tabsWrapper'),
-    tabInfo: document.getElementById('tabInfo'),
-    loader: document.getElementById('loader'),
-    dashboardContent: document.getElementById('dashboard-content'),
-    coordFilter: document.getElementById('coordFilter'),
-    poloFilter: document.getElementById('poloFilter'),
-    execFilter: document.getElementById('execFilter'),
-    dateFromFilter: document.getElementById('dateFromFilter'),
-    dateToFilter: document.getElementById('dateToFilter'),
-    clearFiltersBtn: document.getElementById('clearFiltersBtn'),
-    shareUrl: document.getElementById('shareUrl'),
-    copyUrlBtn: document.getElementById('copyUrlBtn'),
-    feedbackTableBody: document.querySelector('#feedbackTable tbody'),
-    historyTableHeader: document.getElementById('historyTableHeader'),
-    historyTableBody: document.getElementById('historyTableBody'),
-    exportCsvBtn: document.getElementById('exportCsvBtn'),
-    exportExcelBtn: document.getElementById('exportExcelBtn'),
-    rankingCoord: document.getElementById('rankingCoord'),
-    rankingPolo: document.getElementById('rankingPolo'),
-    rankingExec: document.getElementById('rankingExec')
-};
+            sheetIdInput: document.getElementById('sheetId'),
+            loadSheetsBtn: document.getElementById('loadSheetsBtn'),
+            tabsContainer: document.getElementById('tabsContainer'),
+            tabsWrapper: document.getElementById('tabsWrapper'),
+            tabInfo: document.getElementById('tabInfo'),
+            loader: document.getElementById('loader'),
+            dashboardContent: document.getElementById('dashboard-content'),
+            coordFilter: document.getElementById('coordFilter'),
+            poloFilter: document.getElementById('poloFilter'),
+            execFilter: document.getElementById('execFilter'),
+            dateFromFilter: document.getElementById('dateFromFilter'),
+            dateToFilter: document.getElementById('dateToFilter'),
+            clearFiltersBtn: document.getElementById('clearFiltersBtn'),
+            shareUrl: document.getElementById('shareUrl'),
+            copyUrlBtn: document.getElementById('copyUrlBtn'),
+            feedbackTableBody: document.querySelector('#feedbackTable tbody'),
+            historyTableHeader: document.getElementById('historyTableHeader'),
+            historyTableBody: document.getElementById('historyTableBody'),
+            exportCsvBtn: document.getElementById('exportCsvBtn'),
+            exportExcelBtn: document.getElementById('exportExcelBtn'),
+            rankingCoord: document.getElementById('rankingCoord'),
+            rankingPolo: document.getElementById('rankingPolo'),
+            rankingExec: document.getElementById('rankingExec')
+        };
 
         const CONSTANTS = {
             RATING_MAP: { 'Below': 1, 'Meets': 2, 'Above': 3 },
@@ -607,8 +600,7 @@
         // Event Listeners
         DOM.loadSheetsBtn.addEventListener('click', loadAvailableSheets);
         DOM.clearFiltersBtn.addEventListener('click', clearFilters);
-DOM.copyUrlBtn.addEventListener('click', copyShareUrl);
-DOM.exportCsvBtn.addEventListener('click', exportToCSV);
+        DOM.exportCsvBtn.addEventListener('click', exportToCSV);
         DOM.exportExcelBtn.addEventListener('click', exportToExcel);
         
         [DOM.coordFilter, DOM.poloFilter, DOM.execFilter, DOM.dateFromFilter, DOM.dateToFilter].forEach(el => {
@@ -862,7 +854,6 @@ ${error.message}`);
 
                 populateFilters();
                 applyFiltersAndRender();
-        updateShareUrl();
                 DOM.loader.style.display = 'none';
                 DOM.dashboardContent.style.display = 'block';
             } catch (error) {
@@ -911,7 +902,6 @@ ${error.message}`);
             DOM.dateFromFilter.value = '';
             DOM.dateToFilter.value = '';
             applyFiltersAndRender();
-    updateShareUrl();
             }
 
         function parseDate(timestamp) {
@@ -972,7 +962,6 @@ ${error.message}`);
 
             if (Object.keys(charts).length === 0) createCharts();
             updateDashboard(filteredData);
-    updateShareUrl();
         }
 
         function updateDashboard(data) {
@@ -1769,83 +1758,34 @@ ${error.message}`);
             alert('Exportação para Excel requer biblioteca adicional. Use a exportação CSV por enquanto.');
         }
 
-        
-function updateShareUrl() {
-    const params = new URLSearchParams();
-    const sheetId = DOM.sheetIdInput.value.trim();
-    
-    if (sheetId) params.set('sheet', sheetId);
-    if (currentSheetName) params.set('tab', currentSheetName);
-    if (DOM.coordFilter.value !== CONSTANTS.FILTER_ALL) params.set('coord', DOM.coordFilter.value);
-    if (DOM.poloFilter.value !== CONSTANTS.FILTER_ALL) params.set('polo', DOM.poloFilter.value);
-    if (DOM.execFilter.value !== CONSTANTS.FILTER_ALL) params.set('exec', DOM.execFilter.value);
-    if (DOM.dateFromFilter.value) params.set('dateFrom', DOM.dateFromFilter.value);
-    if (DOM.dateToFilter.value) params.set('dateTo', DOM.dateToFilter.value);
-    
-    const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
-    DOM.shareUrl.value = url;
-}
-
-function copyShareUrl() {
-    DOM.shareUrl.select();
-    document.execCommand('copy');
-    
-    const originalText = DOM.copyUrlBtn.textContent;
-    DOM.copyUrlBtn.textContent = '✅ Copiado!';
-    setTimeout(() => {
-        DOM.copyUrlBtn.textContent = originalText;
-    }, 2000);
-}
-
-function loadFiltersFromUrl() {
-    const params = new URLSearchParams(window.location.search);
-    const sheetId = params.get('sheet');
-    
-    if (sheetId) {
-        DOM.sheetIdInput.value = sheetId;
-        
-        // Carregar dados automaticamente
-        setTimeout(() => {
-            loadAvailableSheets().then(() => {
-                // Aguardar um pouco para garantir que os dados foram carregados
+        function loadFiltersFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            
+            const sheetId = params.get('sheet');
+            if (sheetId) {
+                DOM.sheetIdInput.value = sheetId;
+                
+                // Carregar dados automaticamente
                 setTimeout(() => {
-                    const tab = params.get('tab');
-                    const coord = params.get('coord');
-                    const polo = params.get('polo');
-                    const exec = params.get('exec');
-                    const dateFrom = params.get('dateFrom');
-                    const dateTo = params.get('dateTo');
-                    
-                    // Aplicar filtros se existirem
-                    if (coord && coord !== CONSTANTS.FILTER_ALL) {
-                        DOM.coordFilter.value = coord;
-                    }
-                    if (polo && polo !== CONSTANTS.FILTER_ALL) {
-                        DOM.poloFilter.value = polo;
-                    }
-                    if (exec && exec !== CONSTANTS.FILTER_ALL) {
-                        DOM.execFilter.value = exec;
-                    }
-                    if (dateFrom) {
-                        DOM.dateFromFilter.value = dateFrom;
-                    }
-                    if (dateTo) {
-                        DOM.dateToFilter.value = dateTo;
-                    }
-                    
-                    // Aplicar filtros e renderizar
-                    if (coord || polo || exec || dateFrom || dateTo) {
+                    loadAvailableSheets().then(() => {
+                        const tab = params.get('tab');
+                        const coord = params.get('coord');
+                        const polo = params.get('polo');
+                        const exec = params.get('exec');
+                        const dateFrom = params.get('dateFrom');
+                        const dateTo = params.get('dateTo');
+
+                        if (coord) DOM.coordFilter.value = coord;
+                        if (polo) DOM.poloFilter.value = polo;
+                        if (exec) DOM.execFilter.value = exec;
+                        if (dateFrom) DOM.dateFromFilter.value = dateFrom;
+                        if (dateTo) DOM.dateToFilter.value = dateTo;
+
                         applyFiltersAndRender();
-                    }
-                    
-                    updateShareUrl();
-                }, 500);
-            }).catch(error => {
-                console.error('Erro ao carregar planilha da URL:', error);
-            });
-        }, 100);
-    }
-}
+                        });
+                }, 100);
+            }
+        }
     </script>
 </body>
 </html>
