@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard de Performance</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         :root {
             --bg-color: #f8f9fa;
@@ -348,11 +350,11 @@
             .grid-col-span-2 {
                 grid-column: span 1;
             }
-            
+
             header h1 {
                 font-size: 2rem;
             }
-            
+
             .kpi-value {
                 font-size: 2rem;
             }
@@ -362,13 +364,14 @@
 <body>
     <div class="container">
         <header>
+            <h1>📊 Dashboard de Performance</h1>
         </header>
 
         <div class="card">
             <div class="config-section">
                 <div class="input-group">
                     <label for="sheetId">📄 Google Sheet ID</label>
-                    <input type="text" id="sheetId" placeholder="Cole o ID da planilha aqui" value="1U8xayLKk8ampH3w0l6D-vx0uTLLeXIPw_UsXC2dlUTU">
+                    <input type="text" id="sheetId" placeholder="Cole o ID da planilha aqui">
                 </div>
                 <button id="loadSheetsBtn">Carregar Dados</button>
             </div>
@@ -376,12 +379,10 @@
 
         <div id="loader">Carregando... ⏳</div>
 
-        <div id="tabsContainer" class="tabs-container">
-            <div class="card">
-                <h3>📑 Abas Disponíveis</h3>
-                <div id="tabsWrapper" class="tabs-wrapper"></div>
-                <div id="tabInfo" class="tab-info"></div>
-            </div>
+        <div id="tabsContainer" class="tabs-container card">
+            <h3>📑 Abas Disponíveis</h3>
+            <div id="tabsWrapper" class="tabs-wrapper"></div>
+            <div id="tabInfo" class="tab-info"></div>
         </div>
 
         <div id="dashboard-content" style="display: none;">
@@ -406,7 +407,6 @@
                             <option value="all">Todos</option>
                         </select>
                     </div>
-                    
                     <div class="input-group">
                         <label for="dateFromFilter">📅 Data Início</label>
                         <input type="date" id="dateFromFilter">
@@ -417,7 +417,7 @@
                     </div>
                     <button id="clearFiltersBtn" class="secondary">Limpar Filtros</button>
                 </div>
-                </div>
+            </div>
 
             <div class="card">
                 <h3>📊 KPIs Principais</h3>
@@ -429,6 +429,10 @@
                     <div class="kpi-item">
                         <div class="kpi-value" id="kpi-avg">-</div>
                         <div class="kpi-label">Média Geral (0-100)</div>
+                    </div>
+                    <div class="kpi-item">
+                        <div class="kpi-value" id="kpi-routes">-</div>
+                        <div class="kpi-label">Quantidade de Rotas</div>
                     </div>
                     <div class="kpi-item">
                         <div class="kpi-value" id="kpi-non-compliance">-</div>
@@ -448,7 +452,7 @@
                 </div>
             </div>
 
-            <div class="card full-width">
+            <div class="card">
                 <h3>🏆 Top 3 Rankings</h3>
                 <div class="ranking-container">
                     <div class="ranking-item">
@@ -476,14 +480,14 @@
 
                 <div class="card">
                     <h3>⭐ Distribuição das Avaliações</h3>
-                    <div class="chart-container">
+                    <div class="chart-container-square">
                         <canvas id="ratingDistributionChart"></canvas>
                     </div>
                 </div>
 
                 <div class="card">
                     <h3>📈 % Avaliações vs Média</h3>
-                    <div class="chart-container">
+                    <div class="chart-container-square">
                         <canvas id="aboveBelowAvgChart"></canvas>
                     </div>
                 </div>
@@ -515,37 +519,37 @@
                         <canvas id="timelineChart"></canvas>
                     </div>
                 </div>
+            </div>
 
-                <div class="card full-width">
-                    <h3>📝 Pontos a Desenvolver</h3>
-                    <div class="table-container" style="max-height: 400px;">
-                        <table id="feedbackTable">
-                            <thead>
-                                <tr>
-                                    <th>Executivo</th>
-                                    <th>Timestamp</th>
-                                    <th>Feedback</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
+            <div class="card">
+                <h3>📝 Pontos a Desenvolver</h3>
+                <div class="table-container">
+                    <table id="feedbackTable">
+                        <thead>
+                            <tr>
+                                <th>Executivo</th>
+                                <th>Timestamp</th>
+                                <th>Feedback</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
                 </div>
+            </div>
 
-                <div class="card full-width">
-                    <h3>📋 Histórico Completo de Avaliações</h3>
-                    <div class="export-buttons">
-                        <button id="exportCsvBtn">📥 Exportar CSV</button>
-                        <button id="exportExcelBtn">📥 Exportar Excel</button>
-                    </div>
-                    <div class="table-container">
-                        <table id="historyTable">
-                            <thead>
-                                <tr id="historyTableHeader"></tr>
-                            </thead>
-                            <tbody id="historyTableBody"></tbody>
-                        </table>
-                    </div>
+            <div class="card">
+                <h3>📋 Histórico Completo de Avaliações</h3>
+                <div class="export-buttons">
+                    <button id="exportCsvBtn">📥 Exportar CSV</button>
+                    <button id="exportExcelBtn">📥 Exportar Excel</button>
+                </div>
+                <div class="table-container">
+                    <table id="historyTable">
+                        <thead>
+                            <tr id="historyTableHeader"></tr>
+                        </thead>
+                        <tbody id="historyTableBody"></tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -579,7 +583,11 @@
         };
 
         const CONSTANTS = {
-            RATING_MAP: { 'Below': 1, 'Meets': 2, 'Above': 3 },
+            RATING_MAP: {
+                'Below': 1,
+                'Meets': 2,
+                'Above': 3
+            },
             FILTER_ALL: 'all',
             COLOR_BELOW: '#dc3545',
             COLOR_MEETS: '#ffc107',
@@ -587,12 +595,12 @@
         };
 
         const SHEET_TABS = ['FVI', 'Farmer', 'Farmer IA'];
-        
         let STAGE_KEYS = [];
         let STAGE_LABELS = [];
         let allData = [];
         let charts = {};
         let NON_CONFORMITY_FIELD = '';
+        let ROUTE_FIELD = ''; // NOVO: Campo para armazenar a coluna de rotas
         let availableSheets = [];
         let currentSheetName = '';
         let sortState = { column: null, direction: 'asc' };
@@ -602,11 +610,11 @@
         DOM.clearFiltersBtn.addEventListener('click', clearFilters);
         DOM.exportCsvBtn.addEventListener('click', exportToCSV);
         DOM.exportExcelBtn.addEventListener('click', exportToExcel);
-        
+
         [DOM.coordFilter, DOM.poloFilter, DOM.execFilter, DOM.dateFromFilter, DOM.dateToFilter].forEach(el => {
             el.addEventListener('change', () => {
                 applyFiltersAndRender();
-                });
+            });
         });
 
         // Carregar filtros da URL ao iniciar
@@ -622,7 +630,6 @@
 
         function findNonConformityField(headers, raw_headers) {
             const ncKeywords = ['nao_conformidade', 'non_conformity', 'nao_conformidades', 'conformidade', 'conformity'];
-            
             for (let i = 0; i < headers.length; i++) {
                 const header = headers[i];
                 const rawHeader = raw_headers[i].toLowerCase();
@@ -631,7 +638,6 @@
                     return header;
                 }
             }
-            
             for (let i = 0; i < headers.length; i++) {
                 const header = headers[i];
                 const rawHeader = raw_headers[i].toLowerCase();
@@ -640,24 +646,44 @@
                     return header;
                 }
             }
-            
             console.log('❌ Nenhum campo de não conformidade encontrado.');
+            return null;
+        }
+
+        // NOVO: Função para encontrar o campo de rotas
+        function findRouteField(headers, raw_headers) {
+            // Procurar pela coluna "o" ou variações
+            for (let i = 0; i < headers.length; i++) {
+                const header = headers[i];
+                const rawHeader = raw_headers[i].toLowerCase();
+                
+                // Verificar se é exatamente a coluna "o"
+                if (header === 'o') {
+                    console.log('✅ Campo de rotas encontrado (coluna "o"):', header, '->', raw_headers[i]);
+                    return header;
+                }
+                
+                // Verificar variações
+                if (rawHeader.includes('rota') || rawHeader.includes('route') || 
+                    rawHeader.includes('numero') && rawHeader.includes('rota')) {
+                    console.log('✅ Campo de rotas encontrado:', header, '->', raw_headers[i]);
+                    return header;
+                }
+            }
+            console.log('❌ Nenhum campo de rotas encontrado.');
             return null;
         }
 
         function calculateLeadershipStars(data) {
             if (!data.length) return 0;
-            
             let totalScore = 0;
             let totalRatings = 0;
-            
+
             const leadershipStages = STAGE_KEYS.filter((key, index) => {
                 const label = STAGE_LABELS[index].toLowerCase();
-                return label.includes('sondar') || label.includes('unir') || 
-                       label.includes('mostrar') || label.includes('ultrapassar') || 
-                       label.includes('propor');
+                return label.includes('sondar') || label.includes('unir') || label.includes('mostrar') || label.includes('ultrapassar') || label.includes('propor');
             });
-            
+
             data.forEach(row => {
                 leadershipStages.forEach(key => {
                     if (CONSTANTS.RATING_MAP[row[key]]) {
@@ -666,7 +692,7 @@
                     }
                 });
             });
-            
+
             const avgScore = totalRatings > 0 ? totalScore / totalRatings : 0;
             const stars = (avgScore / 3) * 5;
             return Math.round(stars * 10) / 10;
@@ -695,7 +721,7 @@
             try {
                 await discoverSheets(sheetId, SHEET_TABS);
                 DOM.loader.style.display = 'none';
-                
+
                 if (availableSheets.length > 0) {
                     displaySheetTabs();
                     DOM.tabsContainer.style.display = 'block';
@@ -705,8 +731,7 @@
             } catch (error) {
                 DOM.loader.textContent = `❌ Erro: ${error.message}`;
                 console.error(error);
-                alert(`Erro ao carregar abas:
-${error.message}`);
+                alert(`Erro ao carregar abas: ${error.message}`);
                 DOM.loader.style.display = 'none';
             } finally {
                 DOM.loadSheetsBtn.disabled = false;
@@ -715,16 +740,13 @@ ${error.message}`);
 
         async function discoverSheets(sheetId, sheetNames) {
             availableSheets = [];
-            
             for (const name of sheetNames) {
                 try {
                     const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(name)}`;
                     const response = await fetch(url);
-                    
                     if (response.ok) {
                         let text = await response.text();
                         const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);?\s*$/);
-                        
                         if (match) {
                             const json = JSON.parse(match[1]);
                             if (json.status !== 'error' && json.table && json.table.rows) {
@@ -741,7 +763,7 @@ ${error.message}`);
                     console.log(`❌ Erro ao carregar aba "${name}":`, e);
                 }
             }
-            
+
             if (availableSheets.length === 0) {
                 throw new Error('Nenhuma das abas foi encontrada. Verifique se a planilha é pública.');
             }
@@ -749,21 +771,18 @@ ${error.message}`);
 
         function displaySheetTabs() {
             DOM.tabsWrapper.innerHTML = '';
-            
             availableSheets.forEach((sheet, index) => {
                 const button = document.createElement('button');
                 button.className = 'tab-button';
                 button.textContent = `${sheet.name} (${sheet.rowCount} linhas)`;
                 button.onclick = () => selectSheet(sheet.name, index);
-                
                 if (index === 0) {
                     button.classList.add('active');
                     currentSheetName = sheet.name;
                 }
-                
                 DOM.tabsWrapper.appendChild(button);
             });
-            
+
             if (availableSheets.length > 0) {
                 loadSheetData(availableSheets[0].name);
             }
@@ -777,7 +796,6 @@ ${error.message}`);
                     btn.classList.remove('active');
                 }
             });
-            
             currentSheetName = sheetName;
             loadSheetData(sheetName);
         }
@@ -801,13 +819,11 @@ ${error.message}`);
 
                 let text = await response.text();
                 const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);?\s*$/);
-                
                 if (!match) {
                     throw new Error('Formato inválido. Verifique se a planilha é pública.');
                 }
 
                 const json = JSON.parse(match[1]);
-                
                 if (json.status === 'error') {
                     throw new Error(`Erro: ${json.errors.map(e => e.detailed_message).join(', ')}`);
                 }
@@ -823,7 +839,7 @@ ${error.message}`);
 
                 STAGE_KEYS = [];
                 STAGE_LABELS = [];
-                
+
                 headers.forEach((header, index) => {
                     const originalHeader = raw_headers[index];
                     if (originalHeader && originalHeader.includes('Avalie o desempenho')) {
@@ -838,6 +854,7 @@ ${error.message}`);
                 });
 
                 NON_CONFORMITY_FIELD = findNonConformityField(headers, raw_headers);
+                ROUTE_FIELD = findRouteField(headers, raw_headers); // NOVO: Encontrar campo de rotas
 
                 allData = dataRows.map(row => {
                     const entry = {};
@@ -849,18 +866,19 @@ ${error.message}`);
 
                 console.log('✅ Etapas encontradas:', STAGE_LABELS);
                 console.log('✅ Campo de não conformidade:', NON_CONFORMITY_FIELD);
+                console.log('✅ Campo de rotas:', ROUTE_FIELD); // NOVO: Log do campo de rotas
 
                 DOM.tabInfo.innerHTML = `<strong>Aba atual:</strong> ${sheetName || 'Padrão'} | <strong>Total de registros:</strong> ${allData.length} | <strong>Etapas encontradas:</strong> ${STAGE_LABELS.length}`;
 
                 populateFilters();
                 applyFiltersAndRender();
+
                 DOM.loader.style.display = 'none';
                 DOM.dashboardContent.style.display = 'block';
             } catch (error) {
                 DOM.loader.textContent = `❌ Erro: ${error.message}`;
                 console.error(error);
-                alert(`Erro ao carregar dados:
-${error.message}`);
+                alert(`Erro ao carregar dados: ${error.message}`);
             }
         }
 
@@ -891,8 +909,6 @@ ${error.message}`);
             populate(DOM.coordFilter, filters.coord);
             populate(DOM.poloFilter, filters.polo);
             populate(DOM.execFilter, filters.exec);
-
-            
         }
 
         function clearFilters() {
@@ -902,11 +918,10 @@ ${error.message}`);
             DOM.dateFromFilter.value = '';
             DOM.dateToFilter.value = '';
             applyFiltersAndRender();
-            }
+        }
 
         function parseDate(timestamp) {
             if (!timestamp) return null;
-            
             try {
                 let date;
                 if (timestamp.includes('-')) {
@@ -921,11 +936,9 @@ ${error.message}`);
                         date = new Date(year, month, day);
                     }
                 }
-                
                 if (!date || isNaN(date.getTime())) {
                     date = new Date(timestamp);
                 }
-                
                 return isNaN(date.getTime()) ? null : date;
             } catch (e) {
                 return null;
@@ -941,22 +954,20 @@ ${error.message}`);
 
             const filteredData = allData.filter(row => {
                 const all = CONSTANTS.FILTER_ALL;
-                
                 // Filtros básicos
                 if (coord !== all && row.coordenacao !== coord) return false;
                 if (polo !== all && row.polo !== polo) return false;
                 if (exec !== all && row.email_do_executivo !== exec) return false;
-                
+
                 // Filtro de data
                 if (dateFrom || dateTo) {
                     const timestamp = row.carimbo_de_datahora || row.timestamp || row.data || '';
                     const rowDate = parseDate(timestamp);
-                    
                     if (!rowDate) return false;
                     if (dateFrom && rowDate < dateFrom) return false;
                     if (dateTo && rowDate > dateTo) return false;
                 }
-                
+
                 return true;
             });
 
@@ -984,6 +995,9 @@ ${error.message}`);
             let totalScore = 0, totalRatings = 0;
             let totalBonus = 0, bonusCount = 0;
 
+            // NOVO: Contar rotas únicas usando o campo identificado
+            const routesSet = new Set();
+
             data.forEach(row => {
                 STAGE_KEYS.forEach(key => {
                     if (CONSTANTS.RATING_MAP[row[key]]) {
@@ -1004,6 +1018,14 @@ ${error.message}`);
                         }
                     }
                 });
+
+                // NOVO: Adicionar rota ao Set usando o campo identificado
+                if (ROUTE_FIELD && row[ROUTE_FIELD]) {
+                    const routeValue = row[ROUTE_FIELD];
+                    if (routeValue && routeValue.toString().trim() !== '') {
+                        routesSet.add(routeValue.toString().trim());
+                    }
+                }
             });
 
             const avgBase = totalRatings > 0 ? totalScore / totalRatings : 0;
@@ -1012,6 +1034,11 @@ ${error.message}`);
 
             document.getElementById('kpi-avg').textContent = avgScore;
 
+            // NOVO: Atualizar KPI de rotas
+            console.log('🔍 Debug - Rotas encontradas:', routesSet);
+            console.log('🔍 Debug - Total de rotas únicas:', routesSet.size);
+            document.getElementById('kpi-routes').textContent = routesSet.size;
+
             let nonComplianceCount = 0;
             if (NON_CONFORMITY_FIELD) {
                 nonComplianceCount = data.filter(row => {
@@ -1019,7 +1046,6 @@ ${error.message}`);
                     return ncValue !== undefined && ncValue !== null && ncValue !== '' && ncValue.toString().trim() !== '';
                 }).length;
             }
-
             document.getElementById('kpi-non-compliance').textContent = nonComplianceCount;
 
             const feedbackResponses = data.filter(row => {
@@ -1027,12 +1053,12 @@ ${error.message}`);
                 return feedback && (feedback === 'Sim' || feedback === 'Não');
             });
 
-            const feedbackReceivedCount = feedbackResponses.filter(row => 
+            const feedbackReceivedCount = feedbackResponses.filter(row =>
                 row['executivo_recebeu_feedback_esse_mes'] === 'Sim'
             ).length;
 
-            const feedbackPercentage = feedbackResponses.length > 0 
-                ? Math.round((feedbackReceivedCount / feedbackResponses.length) * 100) + '%' 
+            const feedbackPercentage = feedbackResponses.length > 0
+                ? Math.round((feedbackReceivedCount / feedbackResponses.length) * 100) + '%'
                 : '0%';
 
             document.getElementById('kpi-feedback-received').textContent = feedbackPercentage;
@@ -1048,13 +1074,13 @@ ${error.message}`);
             // Calcular médias por grupo
             const calculateGroupAverage = (groupKey) => {
                 const groups = {};
-                
+
                 data.forEach(row => {
                     const groupName = row[groupKey] || 'N/A';
                     if (!groups[groupName]) {
                         groups[groupName] = { sum: 0, count: 0 };
                     }
-                    
+
                     STAGE_KEYS.forEach(key => {
                         if (CONSTANTS.RATING_MAP[row[key]]) {
                             const score = ((CONSTANTS.RATING_MAP[row[key]] - 1) / 2) * 100;
@@ -1063,7 +1089,7 @@ ${error.message}`);
                         }
                     });
                 });
-                
+
                 return Object.entries(groups)
                     .map(([name, data]) => ({
                         name,
@@ -1108,50 +1134,13 @@ ${error.message}`);
                 plugins: { legend: { position: 'top' } }
             };
 
-            createOrUpdateChart('performanceByStageChart', 'bar', emptyData, {
-                ...commonOptions,
-                scales: { y: { beginAtZero: true, max: 100 } }
-            });
-
+            createOrUpdateChart('performanceByStageChart', 'bar', emptyData, { ...commonOptions, scales: { y: { beginAtZero: true, max: 100 } } });
             createOrUpdateChart('ratingDistributionChart', 'doughnut', emptyData, commonOptions);
             createOrUpdateChart('aboveBelowAvgChart', 'pie', emptyData, commonOptions);
-
-            createOrUpdateChart('performanceRadarChart', 'radar', emptyData, {
-                ...commonOptions,
-                scales: { r: { beginAtZero: true, max: 100 } }
-            });
-
-            createOrUpdateChart('evalsByCoordChart', 'bar', emptyData, {
-                ...commonOptions,
-                indexAxis: 'y'
-            });
-
-            createOrUpdateChart('feedbackGivenChart', 'pie', emptyData, {
-                ...commonOptions,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'right',
-                        labels: { boxWidth: 15, padding: 15 }
-                    }
-                }
-            });
-
-            createOrUpdateChart('timelineChart', 'line', emptyData, {
-                ...commonOptions,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 100,
-                        title: { display: true, text: 'Média Geral (0-100)' }
-                    },
-                    x: {
-                        offset: true,
-                        grid: { display: true },
-                        title: { display: true, text: 'Mês' }
-                    }
-                }
-            });
+            createOrUpdateChart('performanceRadarChart', 'radar', emptyData, { ...commonOptions, scales: { r: { beginAtZero: true, max: 100 } } });
+            createOrUpdateChart('evalsByCoordChart', 'bar', emptyData, { ...commonOptions, indexAxis: 'y' });
+            createOrUpdateChart('feedbackGivenChart', 'pie', emptyData, { ...commonOptions, maintainAspectRatio: true, plugins: { legend: { position: 'right', labels: { boxWidth: 15, padding: 15 } } } });
+            createOrUpdateChart('timelineChart', 'line', emptyData, { ...commonOptions, scales: { y: { beginAtZero: true, max: 100, title: { display: true, text: 'Média Geral (0-100)' } }, x: { offset: true, grid: { display: true }, title: { display: true, text: 'Mês' } } } });
         }
 
         function updatePerformanceByStageChart(data) {
@@ -1169,7 +1158,7 @@ ${error.message}`);
             });
 
             const averages = stageTotals.map(s => s.count > 0 ? Math.round(s.sum / s.count) : 0);
-            
+
             // Determinar cores baseadas na média
             const backgroundColors = averages.map(avg => {
                 if (avg < 50) return CONSTANTS.COLOR_BELOW;
@@ -1255,9 +1244,7 @@ ${error.message}`);
             createOrUpdateChart('aboveBelowAvgChart', 'pie', chartData, {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'top' }
-                }
+                plugins: { legend: { position: 'top' } }
             });
         }
 
@@ -1356,7 +1343,11 @@ ${error.message}`);
                 plugins: {
                     legend: {
                         position: 'right',
-                        labels: { boxWidth: 20, padding: 20, font: { size: 14 } }
+                        labels: {
+                            boxWidth: 20,
+                            padding: 20,
+                            font: { size: 14 }
+                        }
                     },
                     tooltip: {
                         callbacks: {
@@ -1376,9 +1367,7 @@ ${error.message}`);
             const fragment = document.createDocumentFragment();
 
             data.forEach(row => {
-                // MUDANÇA: usar 'pontos_a_desenvolver' ao invés de 'escreva_um_feedback_sobre_o_executivo'
                 const feedback = row['pontos_a_desenvolver'] || row['escreva_um_feedback_sobre_o_executivo'];
-                
                 if (feedback) {
                     const tr = document.createElement('tr');
                     const timestamp = row.carimbo_de_datahora || row.timestamp || 'N/A';
@@ -1449,15 +1438,8 @@ ${error.message}`);
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 100,
-                            title: { display: true, text: 'Média Geral (0-100)' }
-                        },
-                        x: {
-                            offset: true,
-                            title: { display: true, text: 'Mês' }
-                        }
+                        y: { beginAtZero: true, max: 100, title: { display: true, text: 'Média Geral (0-100)' } },
+                        x: { offset: true, title: { display: true, text: 'Mês' } }
                     }
                 });
                 return;
@@ -1510,15 +1492,8 @@ ${error.message}`);
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 100,
-                        title: { display: true, text: 'Média Geral (0-100)' }
-                    },
-                    x: {
-                        offset: true,
-                        title: { display: true, text: 'Mês' }
-                    }
+                    y: { beginAtZero: true, max: 100, title: { display: true, text: 'Média Geral (0-100)' } },
+                    x: { offset: true, title: { display: true, text: 'Mês' } }
                 }
             });
         }
@@ -1543,109 +1518,100 @@ ${error.message}`);
         }
 
         function updateHistoryTable(data) {
-    if (data.length === 0) {
-        DOM.historyTableHeader.innerHTML = '<th>Nenhum dado disponível</th>';
-        DOM.historyTableBody.innerHTML = '';
-        return;
-    }
-    
-    // Definir APENAS as colunas que queremos exibir
-    const desiredColumns = [
-        'carimbo_de_datahora',
-        'endereco_de_e_mail',
-        'coordenacao',
-        'polo',
-        'email_do_executivo'
-    ];
-    
-    // Adicionar as colunas de avaliação de desempenho dinamicamente
-    STAGE_KEYS.forEach(key => {
-        desiredColumns.push(key);
-    });
-    
-    // Adicionar média calculada
-    desiredColumns.push('_media_calculada');
-    
-    // Adicionar pontos fortes e pontos a desenvolver
-    desiredColumns.push('pontos_fortes');
-    desiredColumns.push('pontos_a_desenvolver');
-    
-    // Mapear nomes de colunas para labels amigáveis
-    const columnLabels = {
-        'carimbo_de_datahora': 'Carimbo de data/hora',
-        'endereco_de_e_mail': 'Endereço de e-mail',
-        'coordenacao': 'Coordenação',
-        'polo': 'Polo',
-        'email_do_executivo': 'E-mail do Executivo',
-        '_media_calculada': 'Média (0-100)',
-        'pontos_fortes': 'Pontos fortes',
-        'pontos_a_desenvolver': 'Pontos a desenvolver'
-    };
-    
-    // Adicionar labels para as etapas
-    STAGE_KEYS.forEach((key, index) => {
-        columnLabels[key] = STAGE_LABELS[index];
-    });
-    
-    // Criar cabeçalhos APENAS com as colunas desejadas
-    DOM.historyTableHeader.innerHTML = desiredColumns.map(header => {
-        const label = columnLabels[header] || header;
-        return `<th class="sortable" data-column="${header}">${label}</th>`;
-    }).join('');
-    
-    // Adicionar event listeners para ordenação
-    DOM.historyTableHeader.querySelectorAll('th.sortable').forEach(th => {
-        th.addEventListener('click', () => sortHistoryTable(th.dataset.column, desiredColumns));
-    });
-    
-    // Preencher dados com as colunas específicas
-    renderHistoryTableRows(data, desiredColumns);
-}
+            if (data.length === 0) {
+                DOM.historyTableHeader.innerHTML = '<th>Nenhum dado disponível</th>';
+                DOM.historyTableBody.innerHTML = '';
+                return;
+            }
+
+            const desiredColumns = [
+                'carimbo_de_datahora',
+                'endereco_de_e_mail',
+                'coordenacao',
+                'polo',
+                'email_do_executivo'
+            ];
+
+            STAGE_KEYS.forEach(key => {
+                desiredColumns.push(key);
+            });
+
+            desiredColumns.push('_media_calculada');
+            desiredColumns.push('pontos_fortes');
+            desiredColumns.push('pontos_a_desenvolver');
+
+            const columnLabels = {
+                'carimbo_de_datahora': 'Carimbo de data/hora',
+                'endereco_de_e_mail': 'Endereço de e-mail',
+                'coordenacao': 'Coordenação',
+                'polo': 'Polo',
+                'email_do_executivo': 'E-mail do Executivo',
+                '_media_calculada': 'Média (0-100)',
+                'pontos_fortes': 'Pontos fortes',
+                'pontos_a_desenvolver': 'Pontos a desenvolver'
+            };
+
+            STAGE_KEYS.forEach((key, index) => {
+                columnLabels[key] = STAGE_LABELS[index];
+            });
+
+            DOM.historyTableHeader.innerHTML = desiredColumns.map(header => {
+                const label = columnLabels[header] || header;
+                return `<th class="sortable" data-column="${header}">${label}</th>`;
+            }).join('');
+
+            DOM.historyTableHeader.querySelectorAll('th.sortable').forEach(th => {
+                th.addEventListener('click', () => sortHistoryTable(th.dataset.column, desiredColumns));
+            });
+
+            renderHistoryTableRows(data, desiredColumns);
+        }
 
         function renderHistoryTableRows(data, columns) {
-    const fragment = document.createDocumentFragment();
-    data.forEach(row => {
-        const tr = document.createElement('tr');
-        // Usar APENAS as colunas especificadas
-        columns.forEach(column => {
-            const td = document.createElement('td');
-            
-            // Se for a coluna de média calculada, calcular a média
-            if (column === '_media_calculada') {
-                let totalScore = 0;
-                let totalRatings = 0;
-                
-                STAGE_KEYS.forEach(key => {
-                    if (CONSTANTS.RATING_MAP[row[key]]) {
-                        const score = ((CONSTANTS.RATING_MAP[row[key]] - 1) / 2) * 100;
-                        totalScore += score;
-                        totalRatings++;
+            const fragment = document.createDocumentFragment();
+
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+
+                columns.forEach(column => {
+                    const td = document.createElement('td');
+
+                    if (column === '_media_calculada') {
+                        let totalScore = 0;
+                        let totalRatings = 0;
+
+                        STAGE_KEYS.forEach(key => {
+                            if (CONSTANTS.RATING_MAP[row[key]]) {
+                                const score = ((CONSTANTS.RATING_MAP[row[key]] - 1) / 2) * 100;
+                                totalScore += score;
+                                totalRatings++;
+                            }
+                        });
+
+                        const avgScore = totalRatings > 0 ? Math.round(totalScore / totalRatings) : 0;
+                        td.textContent = avgScore;
+                        td.style.fontWeight = '600';
+
+                        if (avgScore >= 75) {
+                            td.style.color = '#28a745';
+                        } else if (avgScore >= 50) {
+                            td.style.color = '#ffc107';
+                        } else {
+                            td.style.color = '#dc3545';
+                        }
+                    } else {
+                        td.textContent = row[column] || '-';
                     }
+
+                    tr.appendChild(td);
                 });
-                
-                const avgScore = totalRatings > 0 ? Math.round(totalScore / totalRatings) : 0;
-                td.textContent = avgScore;
-                td.style.fontWeight = '600';
-                
-                // Adicionar cor baseada na média
-                if (avgScore >= 75) {
-                    td.style.color = '#28a745';
-                } else if (avgScore >= 50) {
-                    td.style.color = '#ffc107';
-                } else {
-                    td.style.color = '#dc3545';
-                }
-            } else {
-                td.textContent = row[column] || '-';
-            }
-            
-            tr.appendChild(td);
-        });
-        fragment.appendChild(tr);
-    });
-    DOM.historyTableBody.innerHTML = '';
-    DOM.historyTableBody.appendChild(fragment);
-}
+
+                fragment.appendChild(tr);
+            });
+
+            DOM.historyTableBody.innerHTML = '';
+            DOM.historyTableBody.appendChild(fragment);
+        }
 
         function sortHistoryTable(column) {
             const coord = DOM.coordFilter.value;
@@ -1659,7 +1625,7 @@ ${error.message}`);
                 if (coord !== all && row.coordenacao !== coord) return false;
                 if (polo !== all && row.polo !== polo) return false;
                 if (exec !== all && row.email_do_executivo !== exec) return false;
-                
+
                 if (dateFrom || dateTo) {
                     const timestamp = row.carimbo_de_datahora || row.timestamp || row.data || '';
                     const rowDate = parseDate(timestamp);
@@ -1667,13 +1633,10 @@ ${error.message}`);
                     if (dateFrom && rowDate < dateFrom) return false;
                     if (dateTo && rowDate > dateTo) return false;
                 }
-                
-                
-                
+
                 return true;
             });
 
-            // Determinar direção da ordenação
             if (sortState.column === column) {
                 sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
             } else {
@@ -1681,7 +1644,6 @@ ${error.message}`);
                 sortState.direction = 'asc';
             }
 
-            // Ordenar dados
             filteredData.sort((a, b) => {
                 const aVal = a[column] || '';
                 const bVal = b[column] || '';
@@ -1694,7 +1656,6 @@ ${error.message}`);
                 return sortState.direction === 'asc' ? comparison : -comparison;
             });
 
-            // Atualizar classes de ordenação
             DOM.historyTableHeader.querySelectorAll('th').forEach(th => {
                 th.classList.remove('sort-asc', 'sort-desc');
                 if (th.dataset.column === column) {
@@ -1717,7 +1678,7 @@ ${error.message}`);
                 if (coord !== all && row.coordenacao !== coord) return false;
                 if (polo !== all && row.polo !== polo) return false;
                 if (exec !== all && row.email_do_executivo !== exec) return false;
-                
+
                 if (dateFrom || dateTo) {
                     const timestamp = row.carimbo_de_datahora || row.timestamp || row.data || '';
                     const rowDate = parseDate(timestamp);
@@ -1725,9 +1686,7 @@ ${error.message}`);
                     if (dateFrom && rowDate < dateFrom) return false;
                     if (dateTo && rowDate > dateTo) return false;
                 }
-                
-                
-                
+
                 return true;
             });
 
@@ -1739,7 +1698,7 @@ ${error.message}`);
             const headers = Object.keys(filteredData[0]);
             const csvContent = [
                 headers.join(','),
-                ...filteredData.map(row => 
+                ...filteredData.map(row =>
                     headers.map(header => {
                         const value = row[header] || '';
                         return `"${String(value).replace(/"/g, '""')}"`;
@@ -1760,12 +1719,10 @@ ${error.message}`);
 
         function loadFiltersFromUrl() {
             const params = new URLSearchParams(window.location.search);
-            
             const sheetId = params.get('sheet');
+
             if (sheetId) {
                 DOM.sheetIdInput.value = sheetId;
-                
-                // Carregar dados automaticamente
                 setTimeout(() => {
                     loadAvailableSheets().then(() => {
                         const tab = params.get('tab');
@@ -1782,7 +1739,7 @@ ${error.message}`);
                         if (dateTo) DOM.dateToFilter.value = dateTo;
 
                         applyFiltersAndRender();
-                        });
+                    });
                 }, 100);
             }
         }
