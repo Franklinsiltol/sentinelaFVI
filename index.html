@@ -562,6 +562,7 @@
         let STAGE_KEYS = [];
         let STAGE_LABELS = [];
         let allData = [];
+        let currentFilteredData = [];
         let charts = {};
         let NON_CONFORMITY_FIELD = '';
         let ROUTE_FIELD = '';
@@ -569,6 +570,7 @@
         let availableSheets = [];
         let currentSheetName = '';
         let sortState = { column: null, direction: 'asc' };
+        let currentTableColumns = [];
 
         // Event Listeners
         DOM.loadBtn.addEventListener('click', loadAvailableSheets);
@@ -948,7 +950,7 @@
             const dateFrom = DOM.dateFromFilter.value ? new Date(DOM.dateFromFilter.value) : null;
             const dateTo = DOM.dateToFilter.value ? new Date(DOM.dateToFilter.value) : null;
 
-            const filteredData = allData.filter(row => {
+            currentFilteredData = allData.filter(row => {
                 const all = CONSTANTS.FILTER_ALL;
                 if (coord !== all && row.coordenacao !== coord) return false;
                 if (polo !== all && row.polo !== polo) return false;
@@ -966,7 +968,7 @@
             });
 
             if (Object.keys(charts).length === 0) createCharts();
-            updateDashboard(filteredData);
+            updateDashboard(currentFilteredData);
         }
 
         function updateDashboard(data) {
@@ -1497,6 +1499,8 @@
             desiredColumns.push('pontos_fortes');
             desiredColumns.push('pontos_a_desenvolver');
 
+            currentTableColumns = desiredColumns;
+
             const columnLabels = {
                 'carimbo_de_datahora': 'Carimbo de data/hora',
                 'endereco_de_e_mail': 'Endereço de e-mail',
@@ -1522,7 +1526,7 @@
             }).join('');
 
             DOM.historyTableHeader.querySelectorAll('th.sortable').forEach(th => {
-                th.addEventListener('click', () => sortHistoryTable(th.dataset.column, desiredColumns));
+                th.addEventListener('click', () => sortHistoryTable(th.dataset.column));
             });
 
             renderHistoryTableRows(data, desiredColumns);
@@ -1572,29 +1576,8 @@
         }
 
         function sortHistoryTable(column) {
-            const coord = DOM.coordFilter.value;
-            const polo = DOM.poloFilter.value;
-            const exec = DOM.execFilter.value;
-            const dateFrom = DOM.dateFromFilter.value ? new Date(DOM.dateFromFilter.value) : null;
-            const dateTo = DOM.dateToFilter.value ? new Date(DOM.dateToFilter.value) : null;
-
-            let filteredData = allData.filter(row => {
-                const all = CONSTANTS.FILTER_ALL;
-                if (coord !== all && row.coordenacao !== coord) return false;
-                if (polo !== all && row.polo !== polo) return false;
-                if (exec !== all && row.email_do_executivo !== exec) return false;
-
-                if (dateFrom || dateTo) {
-                    const timestamp = row.carimbo_de_datahora || row.timestamp || row.data || '';
-                    const rowDate = parseDate(timestamp);
-                    if (!rowDate) return false;
-                    if (dateFrom && rowDate < dateFrom) return false;
-                    if (dateTo && rowDate > dateTo) return false;
-                }
-
-                return true;
-            });
-
+            console.log('Ordenando por coluna:', column);
+            
             if (sortState.column === column) {
                 sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
             } else {
@@ -1602,25 +1585,48 @@
                 sortState.direction = 'asc';
             }
 
-            filteredData.sort((a, b) => {
+            console.log('Direção:', sortState.direction);
+
+            // Cria uma cópia dos dados filtrados para ordenar
+            let sortedData = [...currentFilteredData];
+
+            sortedData.sort((a, b) => {
                 let aVal, bVal;
 
                 if (column === '_media_calculada') {
                     aVal = calculateRowScore(a);
                     bVal = calculateRowScore(b);
+                } else if (column === CULTURE_FIELD) {
+                    aVal = parseFloat(a[column]) || 0;
+                    bVal = parseFloat(b[column]) || 0;
+                } else if (column === 'carimbo_de_datahora') {
+                    aVal = parseDate(a[column]) || new Date(0);
+                    bVal = parseDate(b[column]) || new Date(0);
                 } else {
                     aVal = a[column] || '';
                     bVal = b[column] || '';
                 }
 
+                // Comparação numérica
                 if (typeof aVal === 'number' && typeof bVal === 'number') {
                     return sortState.direction === 'asc' ? aVal - bVal : bVal - aVal;
                 }
 
+                // Comparação de datas
+                if (aVal instanceof Date && bVal instanceof Date) {
+                    return sortState.direction === 'asc' 
+                        ? aVal.getTime() - bVal.getTime() 
+                        : bVal.getTime() - aVal.getTime();
+                }
+
+                // Comparação de strings
                 const comparison = String(aVal).localeCompare(String(bVal));
                 return sortState.direction === 'asc' ? comparison : -comparison;
             });
 
+            console.log('Dados ordenados:', sortedData.length, 'registros');
+
+            // Atualiza os indicadores visuais
             DOM.historyTableHeader.querySelectorAll('th').forEach(th => {
                 th.classList.remove('sort-asc', 'sort-desc');
                 if (th.dataset.column === column) {
@@ -1628,42 +1634,20 @@
                 }
             });
 
-            renderHistoryTableRows(filteredData);
+            // Renderiza a tabela ordenada
+            renderHistoryTableRows(sortedData, currentTableColumns);
         }
 
         function exportToCSV() {
-            const coord = DOM.coordFilter.value;
-            const polo = DOM.poloFilter.value;
-            const exec = DOM.execFilter.value;
-            const dateFrom = DOM.dateFromFilter.value ? new Date(DOM.dateFromFilter.value) : null;
-            const dateTo = DOM.dateToFilter.value ? new Date(DOM.dateToFilter.value) : null;
-
-            const filteredData = allData.filter(row => {
-                const all = CONSTANTS.FILTER_ALL;
-                if (coord !== all && row.coordenacao !== coord) return false;
-                if (polo !== all && row.polo !== polo) return false;
-                if (exec !== all && row.email_do_executivo !== exec) return false;
-
-                if (dateFrom || dateTo) {
-                    const timestamp = row.carimbo_de_datahora || row.timestamp || row.data || '';
-                    const rowDate = parseDate(timestamp);
-                    if (!rowDate) return false;
-                    if (dateFrom && rowDate < dateFrom) return false;
-                    if (dateTo && rowDate > dateTo) return false;
-                }
-
-                return true;
-            });
-
-            if (filteredData.length === 0) {
+            if (currentFilteredData.length === 0) {
                 alert('Nenhum dado para exportar.');
                 return;
             }
 
-            const headers = Object.keys(filteredData[0]);
+            const headers = Object.keys(currentFilteredData[0]);
             const csvContent = [
                 headers.join(','),
-                ...filteredData.map(row =>
+                ...currentFilteredData.map(row =>
                     headers.map(header => {
                         const value = row[header] || '';
                         return `"${String(value).replace(/"/g, '""')}"`;
