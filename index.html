@@ -565,6 +565,7 @@
         let charts = {};
         let NON_CONFORMITY_FIELD = '';
         let ROUTE_FIELD = '';
+        let CULTURE_FIELD = '';
         let availableSheets = [];
         let currentSheetName = '';
         let sortState = { column: null, direction: 'asc' };
@@ -631,35 +632,72 @@
             return null;
         }
 
-        function calculateLeadershipStars(data) {
-            if (!data.length) return 0;
+        function findCultureField(headers, raw_headers) {
+            for (let i = 0; i < headers.length; i++) {
+                const header = headers[i];
+                const rawHeader = raw_headers[i].toLowerCase();
+                
+                if (rawHeader.includes('cultura') || rawHeader.includes('valores') || 
+                    rawHeader.includes('culture') || rawHeader.includes('values') ||
+                    rawHeader.includes('liderança') || rawHeader.includes('leadership')) {
+                    console.log('✅ Campo de Cultura e Valores encontrado:', header, '->', raw_headers[i]);
+                    return header;
+                }
+            }
+            console.log('❌ Nenhum campo de Cultura e Valores encontrado.');
+            return null;
+        }
+
+        function calculateRowScore(row) {
+            // Calcula a média das etapas (Below=0, Meets=50, Above=100)
             let totalScore = 0;
             let totalRatings = 0;
 
-            const leadershipStages = STAGE_KEYS.filter((key, index) => {
-                const label = STAGE_LABELS[index].toLowerCase();
-                return label.includes('sondar') || label.includes('unir') || label.includes('mostrar') || label.includes('ultrapassar') || label.includes('propor');
+            STAGE_KEYS.forEach(key => {
+                if (CONSTANTS.RATING_MAP[row[key]]) {
+                    const score = ((CONSTANTS.RATING_MAP[row[key]] - 1) / 2) * 100;
+                    totalScore += score;
+                    totalRatings++;
+                }
             });
+
+            const baseAvg = totalRatings > 0 ? totalScore / totalRatings : 0;
+
+            // Adiciona o bônus de cultura (1-5 estrelas convertido para 0-10 pontos)
+            let cultureBonus = 0;
+            if (CULTURE_FIELD && row[CULTURE_FIELD]) {
+                const cultureValue = parseFloat(row[CULTURE_FIELD]);
+                if (!isNaN(cultureValue) && cultureValue >= 1 && cultureValue <= 5) {
+                    cultureBonus = cultureValue * 2; // 1 estrela = 2 pontos, 5 estrelas = 10 pontos
+                }
+            }
+
+            return Math.round(baseAvg + cultureBonus);
+        }
+
+        function calculateLeadershipStars(data) {
+            if (!data.length) return 0;
+            let totalStars = 0;
+            let count = 0;
 
             data.forEach(row => {
-                leadershipStages.forEach(key => {
-                    if (CONSTANTS.RATING_MAP[row[key]]) {
-                        totalScore += CONSTANTS.RATING_MAP[row[key]];
-                        totalRatings++;
+                if (CULTURE_FIELD && row[CULTURE_FIELD]) {
+                    const stars = parseFloat(row[CULTURE_FIELD]);
+                    if (!isNaN(stars) && stars >= 1 && stars <= 5) {
+                        totalStars += stars;
+                        count++;
                     }
-                });
+                }
             });
 
-            const avgScore = totalRatings > 0 ? totalScore / totalRatings : 0;
-            const stars = (avgScore / 3) * 5;
-            return Math.round(stars * 10) / 10;
+            return count > 0 ? Math.round((totalStars / count) * 10) / 10 : 0;
         }
 
         function generateStars(rating) {
             const fullStars = Math.floor(rating);
             const halfStar = rating % 1 >= 0.5 ? 1 : 0;
             const emptyStars = 5 - fullStars - halfStar;
-            return '★'.repeat(fullStars) + '½'.repeat(halfStar) + '☆'.repeat(emptyStars);
+            return '★'.repeat(fullStars) + (halfStar ? '½' : '') + '☆'.repeat(emptyStars);
         }
 
         async function loadAvailableSheets() {
@@ -812,6 +850,7 @@
 
                 NON_CONFORMITY_FIELD = findNonConformityField(headers, raw_headers);
                 ROUTE_FIELD = findRouteField(headers, raw_headers);
+                CULTURE_FIELD = findCultureField(headers, raw_headers);
 
                 allData = dataRows.map(row => {
                     const entry = {};
@@ -824,6 +863,7 @@
                 console.log('✅ Etapas encontradas:', STAGE_LABELS);
                 console.log('✅ Campo de não conformidade:', NON_CONFORMITY_FIELD);
                 console.log('✅ Campo de rotas:', ROUTE_FIELD);
+                console.log('✅ Campo de Cultura e Valores:', CULTURE_FIELD);
 
                 DOM.tabInfo.innerHTML = `<strong>Aba atual:</strong> ${sheetName || 'Padrão'} | <strong>Total de registros:</strong> ${allData.length} | <strong>Etapas encontradas:</strong> ${STAGE_LABELS.length}`;
 
@@ -946,32 +986,17 @@
         function updateKPIs(data) {
             document.getElementById('kpi-total').textContent = data.length;
 
-            let totalScore = 0, totalRatings = 0;
-            let totalBonus = 0, bonusCount = 0;
-            let totalRoutes = 0;
-
+            // Calcula média geral usando a nova função
+            let totalScore = 0;
             data.forEach(row => {
-                STAGE_KEYS.forEach(key => {
-                    if (CONSTANTS.RATING_MAP[row[key]]) {
-                        const score = ((CONSTANTS.RATING_MAP[row[key]] - 1) / 2) * 100;
-                        totalScore += score;
-                        totalRatings++;
-                    }
-                });
+                totalScore += calculateRowScore(row);
+            });
+            const avgScore = data.length > 0 ? Math.round(totalScore / data.length) : 0;
+            document.getElementById('kpi-avg').textContent = avgScore;
 
-                Object.keys(row).forEach(key => {
-                    const keyLower = key.toLowerCase();
-                    if (keyLower.includes('bonus') || keyLower.includes('cultura') || keyLower.includes('valores')) {
-                        const valor = row[key];
-                        if (valor && !isNaN(valor) && valor >= 1 && valor <= 5) {
-                            const bonusScore = parseFloat(valor) * 2;
-                            totalBonus += bonusScore;
-                            bonusCount++;
-                        }
-                    }
-                });
-
-                // SOMA DAS ROTAS
+            // Soma total de rotas
+            let totalRoutes = 0;
+            data.forEach(row => {
                 if (ROUTE_FIELD && row[ROUTE_FIELD]) {
                     const routeValue = row[ROUTE_FIELD];
                     if (routeValue && routeValue.toString().trim() !== '') {
@@ -982,14 +1007,9 @@
                     }
                 }
             });
-
-            const avgBase = totalRatings > 0 ? totalScore / totalRatings : 0;
-            const avgBonus = bonusCount > 0 ? totalBonus / bonusCount : 0;
-            const avgScore = Math.round(avgBase + avgBonus);
-
-            document.getElementById('kpi-avg').textContent = avgScore;
             document.getElementById('kpi-routes').textContent = totalRoutes;
 
+            // Não conformidades
             let nonComplianceCount = 0;
             if (NON_CONFORMITY_FIELD) {
                 nonComplianceCount = data.filter(row => {
@@ -999,6 +1019,7 @@
             }
             document.getElementById('kpi-non-compliance').textContent = nonComplianceCount;
 
+            // Feedback recebido
             const feedbackResponses = data.filter(row => {
                 const feedback = row['executivo_recebeu_feedback_esse_mes'];
                 return feedback && (feedback === 'Sim' || feedback === 'Não');
@@ -1014,6 +1035,7 @@
 
             document.getElementById('kpi-feedback-received').textContent = feedbackPercentage;
 
+            // Cultura e Valores (estrelas)
             const leadershipRating = calculateLeadershipStars(data);
             const starsElement = document.querySelector('#kpi-leadership .stars');
             const ratingElement = document.querySelector('#kpi-leadership .stars-rating');
@@ -1031,13 +1053,9 @@
                         groups[groupName] = { sum: 0, count: 0 };
                     }
 
-                    STAGE_KEYS.forEach(key => {
-                        if (CONSTANTS.RATING_MAP[row[key]]) {
-                            const score = ((CONSTANTS.RATING_MAP[row[key]] - 1) / 2) * 100;
-                            groups[groupName].sum += score;
-                            groups[groupName].count++;
-                        }
-                    });
+                    const rowScore = calculateRowScore(row);
+                    groups[groupName].sum += rowScore;
+                    groups[groupName].count++;
                 });
 
                 return Object.entries(groups)
@@ -1349,24 +1367,10 @@
                     monthlyData[monthYear] = { sum: 0, count: 0 };
                 }
 
-                let rowSum = 0;
-                let rowCount = 0;
-
-                STAGE_KEYS.forEach(key => {
-                    const rating = CONSTANTS.RATING_MAP[row[key]];
-                    if (rating) {
-                        const score = ((rating - 1) / 2) * 100;
-                        rowSum += score;
-                        rowCount++;
-                    }
-                });
-
-                if (rowCount > 0) {
-                    const rowAvg = rowSum / rowCount;
-                    monthlyData[monthYear].sum += rowAvg;
-                    monthlyData[monthYear].count++;
-                    hasValidData = true;
-                }
+                const rowScore = calculateRowScore(row);
+                monthlyData[monthYear].sum += rowScore;
+                monthlyData[monthYear].count++;
+                hasValidData = true;
             });
 
             if (!hasValidData) {
@@ -1485,6 +1489,10 @@
                 desiredColumns.push(key);
             });
 
+            if (CULTURE_FIELD) {
+                desiredColumns.push(CULTURE_FIELD);
+            }
+
             desiredColumns.push('_media_calculada');
             desiredColumns.push('pontos_fortes');
             desiredColumns.push('pontos_a_desenvolver');
@@ -1499,6 +1507,10 @@
                 'pontos_fortes': 'Pontos fortes',
                 'pontos_a_desenvolver': 'Pontos a desenvolver'
             };
+
+            if (CULTURE_FIELD) {
+                columnLabels[CULTURE_FIELD] = 'Cultura e Valores (★)';
+            }
 
             STAGE_KEYS.forEach((key, index) => {
                 columnLabels[key] = STAGE_LABELS[index];
@@ -1526,18 +1538,7 @@
                     const td = document.createElement('td');
 
                     if (column === '_media_calculada') {
-                        let totalScore = 0;
-                        let totalRatings = 0;
-
-                        STAGE_KEYS.forEach(key => {
-                            if (CONSTANTS.RATING_MAP[row[key]]) {
-                                const score = ((CONSTANTS.RATING_MAP[row[key]] - 1) / 2) * 100;
-                                totalScore += score;
-                                totalRatings++;
-                            }
-                        });
-
-                        const avgScore = totalRatings > 0 ? Math.round(totalScore / totalRatings) : 0;
+                        const avgScore = calculateRowScore(row);
                         td.textContent = avgScore;
                         td.style.fontWeight = '600';
 
@@ -1547,6 +1548,14 @@
                             td.style.color = '#ffc107';
                         } else {
                             td.style.color = '#dc3545';
+                        }
+                    } else if (column === CULTURE_FIELD) {
+                        const stars = parseFloat(row[column]);
+                        if (!isNaN(stars) && stars >= 1 && stars <= 5) {
+                            td.textContent = generateStars(stars) + ' (' + stars + ')';
+                            td.style.color = '#FFD700';
+                        } else {
+                            td.textContent = row[column] || '-';
                         }
                     } else {
                         td.textContent = row[column] || '-';
@@ -1594,8 +1603,15 @@
             }
 
             filteredData.sort((a, b) => {
-                const aVal = a[column] || '';
-                const bVal = b[column] || '';
+                let aVal, bVal;
+
+                if (column === '_media_calculada') {
+                    aVal = calculateRowScore(a);
+                    bVal = calculateRowScore(b);
+                } else {
+                    aVal = a[column] || '';
+                    bVal = b[column] || '';
+                }
 
                 if (typeof aVal === 'number' && typeof bVal === 'number') {
                     return sortState.direction === 'asc' ? aVal - bVal : bVal - aVal;
